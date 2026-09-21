@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>GEO Score Analyzer — Option A · Phase 4</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Chart.js 4.4.1 (MIT) — 강의장 등 CDN이 막힌 네트워크에서도 동작하도록 서버가 직접 제공 -->
+<script src="vendor/chart.umd.min.js"></script>
+<script>if(!window.Chart){window.__noChart=true;window.Chart=function(){return{destroy:function(){},update:function(){}}};}</script>
 <style>
 :root{
   --navy:#065A82;--teal:#1C7293;--cyan:#00B4D8;--mid:#21295C;
