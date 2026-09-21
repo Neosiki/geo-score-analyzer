@@ -16,6 +16,10 @@
 cd server && npm install && npm test && npm start   # http://localhost:3000
 ```
 
+### 서버 없이 쓰는 단일 파일 버전
+
+[`standalone/geo_score_analyzer_v3.1.html`](standalone/geo_score_analyzer_v3.1.html)을 내려받아 더블클릭하면 됩니다. 서버와 **같은 채점 엔진 v3**(22개 항목)와 그래프 라이브러리를 파일 안에 넣어 **인터넷 없이도** 기사 HTML 붙여넣기 분석·재구성이 됩니다(같은 기사면 서버와 같은 점수). 강의·실습용으로 권장합니다. 서버 응답 헤더 검사·사이트 점검·측정 루프·AI 분석·PDF/Excel은 서버 버전에만 있습니다.
+
 자세한 사용법은 [`server/README.md`](server/README.md), 설계·변경 이력은 [`docs/고도화설계서.md`](docs/고도화설계서.md). 아래는 v3 웹 도구 실행 결과(2026.06.09) 분석 문서입니다. 이 문서의 채점표는 v2 엔진 기준이며, v3에서 배점이 일부 바뀌었습니다.
 
 ---
