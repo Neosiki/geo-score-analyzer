@@ -94,7 +94,8 @@ const bad = site({
   assert.strictEqual(st(b, 'ssr'), 'fail', 'JS 렌더링 본문 없음');
   assert.strictEqual(st(b, 'viewport'), 'ok');
   // 네트워크 오류도 죽지 않음
-  const c = await auditSite('https://down.example', { fetcher: async () => { throw new Error('ECONNREFUSED'); } });
-  assert.ok(c.items.length > 5);
+  // 접속 불가(주소 오타·사내망 차단)는 빈 결과표 대신 원인 메시지
+  await assert.rejects(auditSite('https://down.example', { fetcher: async () => { throw new Error('ECONNREFUSED'); } }), /접속하지 못했습니다.*ECONNREFUSED/);
+  await assert.rejects(auditSite('https://blocked.example/a', { fetcher: async () => ({ status: 403, headers: {}, body: 'Forbidden' }) }), /정상 응답하지 않습니다 \(홈 403, 기사 403\)/);
   console.log('✅ bad site audit OK —', JSON.stringify(b.summary));
 })().catch(e => { console.error(e); process.exit(1); });
