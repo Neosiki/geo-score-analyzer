@@ -138,6 +138,16 @@ async function auditSite(inputUrl, opts = {}) {
     articleUrl ? safeFetch(fetcher, articleUrl) : Promise.resolve(null),
   ]);
 
+  // 사이트에 아예 접속되지 않으면(주소 오타·사내망 차단 등) 결과표 대신 원인을 알려준다
+  if (!home.status && !robotsRes.status && !notFound.status && (!article || !article.status)) {
+    const why = home.error || robotsRes.error || '';
+    throw new Error(`사이트에 접속하지 못했습니다 (${origin}). 주소가 맞는지, 이 PC에서 인터넷에 나갈 수 있는지 확인하세요.` + (why ? ` [${why.slice(0, 120)}]` : ''));
+  }
+  const okStatus = (r) => r && r.status >= 200 && r.status < 400;
+  if (!okStatus(home) && (!article || !okStatus(article))) {
+    throw new Error(`사이트가 정상 응답하지 않습니다 (홈 ${home.status}${article ? ', 기사 ' + article.status : ''}). 주소 오류이거나, 사이트가 봇·해외 접속을 막고 있을 수 있습니다. 브라우저에서 열리는데 여기서 안 되면 "봇 차단"이 원인입니다 — 그 경우 검색·AI 봇도 막혔는지 robots.txt와 방화벽 설정을 확인하세요.`);
+  }
+
   // ── 1. robots.txt · 크롤러 정책 ─────────────────────────────
   const robotsOk = robotsRes.status === 200 && !looksHtml(robotsRes);
   const parsed = robotsOk ? parseRobots(robotsRes.body) : { groups: [], sitemaps: [] };
