@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GEO Score Analyzer — Option A · Phase 4</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --navy:#065A82;--teal:#1C7293;--cyan:#00B4D8;--mid:#21295C;
+  --accent:#FF6B35;--green:#2D9E6B;--yellow:#F59E0B;--red:#EF4444;
+  --bg:#f0f5f9;--card:#fff;--text:#1a2332;--muted:#64748b;--border:#e2e8f0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* TOP BAR */
+.topbar{background:linear-gradient(135deg,var(--mid) 0%,var(--navy) 55%,var(--teal) 100%);padding:16px 36px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.topbar h1{color:#fff;font-size:16px;font-weight:700}
+.badge{background:rgba(255,255,255,.18);color:#fff;font-size:10px;padding:2px 9px;border-radius:20px}
+.topbar .sub{color:rgba(255,255,255,.5);font-size:11px;margin-left:auto}
+
+/* LAYOUT */
+.wrap{max-width:1040px;margin:0 auto;padding:24px 18px}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:0;flex-wrap:wrap;border-bottom:2px solid var(--border)}
+.tab{padding:9px 18px;font-size:12.5px;font-weight:600;cursor:pointer;border:none;font-family:inherit;background:transparent;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:.18s;border-radius:6px 6px 0 0}
+.tab:hover{color:var(--navy);background:rgba(6,90,130,.06)}
+.tab.active{color:var(--navy);border-bottom-color:var(--navy);background:rgba(6,90,130,.06)}
+.tab.dyn{display:none}
+.section{display:none;padding-top:20px}
+.section.active{display:block}
+
+/* CARD */
+.card{background:var(--card);border-radius:12px;padding:22px;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:18px}
+.card h2{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.card>p,.card-sub{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+
+/* FORM */
+.row{display:flex;gap:9px;margin-bottom:10px}
+.row input{flex:1;border:2px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px;font-family:inherit;outline:none;transition:.2s}
+.row input:focus{border-color:var(--cyan)}
+.btn{border:none;border-radius:8px;padding:10px 18px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:.18s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn-primary{background:linear-gradient(135deg,var(--navy),var(--teal));color:#fff}
+.btn-primary:hover{opacity:.88}.btn-primary:disabled{opacity:.45;cursor:not-allowed}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{opacity:.88}
+.btn-accent{background:var(--accent);color:#fff}.btn-accent:hover{opacity:.88}
+.btn-teal{background:var(--teal);color:#fff}.btn-teal:hover{opacity:.88}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--muted)}
+.btn-outline:hover{border-color:var(--navy);color:var(--navy)}
+.btn-sm{padding:5px 12px;font-size:11.5px}
+.textarea{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:'Courier New',monospace;resize:vertical;outline:none;transition:.2s;line-height:1.5}
+.textarea:focus{border-color:var(--cyan)}
+.banner{border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:10px;display:none;line-height:1.6}
+.bl{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.be{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+.bs{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+.bo{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
+.spinner{display:inline-block;width:11px;height:11px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--mid),var(--navy));border-radius:14px;padding:24px;display:grid;grid-template-columns:150px 1fr;gap:22px;align-items:center;margin-bottom:16px}
+.gauge-wrap{position:relative;width:130px;height:130px;margin:0 auto}
+.gauge-wrap canvas{width:130px!important;height:130px!important}
+.gauge-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.gscore{font-size:36px;font-weight:900;color:#fff;line-height:1}
+.glabel{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px}
+.hero-info h2{color:#fff;font-size:18px;font-weight:900;margin-bottom:5px}
+.gbadge{display:inline-block;font-size:20px;font-weight:900;padding:2px 13px;border-radius:7px;margin-bottom:8px}
+.gA{background:#22c55e;color:#fff}.gB{background:#3b82f6;color:#fff}.gC{background:#f59e0b;color:#fff}.gD{background:#f97316;color:#fff}.gF{background:#ef4444;color:#fff}
+.hero-sum{color:rgba(255,255,255,.8);font-size:12px;line-height:1.8}
+.sbars{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+.sbar{background:rgba(255,255,255,.1);border-radius:7px;padding:7px 10px}
+.sbar-lbl{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:3px}
+.sbar-track{background:rgba(255,255,255,.15);border-radius:4px;height:5px}
+.sbar-fill{height:5px;border-radius:4px;transition:width .8s}
+.sbar-val{font-size:11px;font-weight:700;color:#fff;margin-top:3px}
+
+/* CHARTS */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.chart-card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.chart-card h3{font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:10px}
+.cw{position:relative;height:195px}
+
+/* TABLE */
+.sec-lbl{font-size:11px;font-weight:700;color:#fff;padding:2px 9px;border-radius:4px;margin-bottom:6px;display:inline-block}
+.sl-seo{background:var(--teal)}.sl-geo{background:var(--mid)}
+table{width:100%;border-collapse:collapse;margin-bottom:12px}
+th{font-size:11px;font-weight:600;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:2px solid var(--border)}
+td{font-size:11.5px;padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px}
+.gate{border-radius:10px;padding:12px 16px;margin:0 0 14px;font-size:12.5px;line-height:1.65;border:1px solid}
+.gate b{font-size:13.5px}.gate ul{margin:6px 0 0 18px}
+.gate-blocked{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
+.gate-limited{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+.gate-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46;padding:8px 14px}
+.gate-chip{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px}
+.gc-blocked{background:#fee2e2;color:#b91c1c}.gc-limited{background:#fef3c7;color:#b45309}
+.m-in{border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box}
+.m-exp{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.m-pre{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:10px 12px;font-size:11.5px;line-height:1.6;white-space:pre-wrap;margin-top:8px}
+.m-warn{background:#fef3c7;color:#92400e;border-radius:8px;padding:6px 10px 6px 26px;font-size:11.5px;margin-top:6px}
+.m-chip{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:10px;background:#f1f5f9;margin:1px 0}
+.m-up{background:#dcfce7;color:#166534}.m-down{background:#fee2e2;color:#991b1b}
+.st-ok{color:var(--green)}.st-warn{color:#b45309}.st-fail{color:var(--red)}.st-info{color:var(--muted)}
+.site-sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}.site-sum div{flex:1;min-width:90px;border-radius:10px;padding:10px;text-align:center;font-size:11px;background:#f1f5f9}
+.site-sum b{display:block;font-size:22px}
+.bot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.bot-card{border:1px solid var(--border);border-radius:10px;padding:10px 12px}.bot-card h4{font-size:12.5px;margin-bottom:2px}
+.bot-card p{font-size:10.5px;color:var(--muted);margin-bottom:6px;line-height:1.5}
+.bot-row{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:2px 0;border-top:1px dashed var(--border)}
+.dp{background:var(--green)}.dw{background:var(--yellow)}.df{background:var(--red)}
+.pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px}
+.pp{background:#dcfce7;color:#166534}.pw{background:#fef9c3;color:#854d0e}.pf{background:#fee2e2;color:#991b1b}
+.dtxt{font-size:10.5px;color:var(--muted);margin-top:1px}
+
+/* ACTION BAR */
+.action-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.action-bar .spacer{margin-left:auto}
+
+/* COMPARE */
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.cmp-hero{border-radius:12px;padding:18px;text-align:center}
+.cmp-score{font-size:48px;font-weight:900;line-height:1}
+.cmp-grade{font-size:16px;font-weight:700;margin:4px 0 8px}
+.cmp-subs{font-size:12px;line-height:1.7}
+.cmp-A{background:linear-gradient(135deg,#065A82,#1C7293);color:#fff}
+.cmp-B{background:linear-gradient(135deg,#21295C,#065A82);color:#fff}
+.diff-plus{color:var(--green);font-weight:700}
+.diff-minus{color:var(--red);font-weight:700}
+.diff-zero{color:var(--muted)}
+.winner-badge{display:inline-block;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:6px}
+
+/* HISTORY */
+.hist-item{background:var(--bg);border-radius:9px;padding:11px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.18s}
+.hist-item:hover{background:#e8f0f8}
+.hist-score{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff;flex-shrink:0}
+.hist-info{flex:1;min-width:0}
+.hist-url{font-size:12px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-meta{font-size:11px;color:var(--muted)}
+.hist-del{color:var(--muted);font-size:14px;cursor:pointer;padding:4px;border-radius:4px;transition:.15s}
+.hist-del:hover{color:var(--red);background:#fee2e2}
+.hist-empty{text-align:center;padding:32px;color:var(--muted);font-size:13px}
+
+/* REWRITE PANEL */
+.rw-card{background:var(--card);border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,.09);margin-bottom:24px;overflow:hidden}
+.rw-header{background:linear-gradient(135deg,#1a2332,var(--mid));padding:18px 22px;display:flex;align-items:center;gap:14px}
+.rw-header h3{color:#fff;font-size:14px;font-weight:700;flex:1}
+.rw-header p{color:rgba(255,255,255,.6);font-size:11.5px;margin-top:3px}
+.rw-body{padding:20px;display:none}
+.rw-sec{margin-bottom:18px}
+.rw-sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.rw-sec-title{font-size:12.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:7px}
+.rw-tag{font-size:10px;font-weight:600;padding:1px 7px;border-radius:4px}
+.tag-seo{background:#e0f2fe;color:#0369a1}.tag-geo{background:#f3e8ff;color:#6b21a8}.tag-both{background:#ecfdf5;color:#065f46}
+.rw-hint{font-size:11.5px;color:var(--muted);background:#f8fafc;border-left:3px solid var(--cyan);padding:7px 12px;border-radius:0 6px 6px 0;margin-bottom:6px;line-height:1.6}
+.rw-hint b{color:var(--navy)}
+.rw-textarea{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;resize:vertical;line-height:1.7;transition:.2s;color:var(--text)}
+.rw-textarea:focus{border-color:var(--cyan)}
+.rw-textarea.mono{font-family:'Courier New',monospace;font-size:12px}
+.char-count{font-size:10.5px;color:var(--muted);text-align:right;margin-top:3px}
+.char-ok{color:var(--green);font-weight:600}.char-warn{color:var(--yellow);font-weight:600}.char-bad{color:var(--red);font-weight:600}
+.copy-bar{background:var(--bg);border-top:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.copy-bar p{font-size:11.5px;color:var(--muted);flex:1;line-height:1.5;min-width:200px}
+
+/* SOV LINK */
+.sov-link{background:linear-gradient(135deg,rgba(6,90,130,.08),rgba(28,114,147,.08));border:1.5px solid rgba(0,180,216,.3);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:16px;text-decoration:none}
+.sov-link:hover{background:linear-gradient(135deg,rgba(6,90,130,.14),rgba(28,114,147,.14))}
+.sov-icon{font-size:24px}
+.sov-text h4{font-size:13px;font-weight:700;color:var(--navy)}
+.sov-text p{font-size:11.5px;color:var(--muted)}
+
+/* BOOKMARKLET */
+.bm-box{background:#1a2332;border-radius:10px;padding:16px 18px;margin-top:12px}
+.bm-box h4{color:#fff;font-size:12.5px;font-weight:700;margin-bottom:8px}
+.bm-box p{color:rgba(255,255,255,.6);font-size:11.5px;margin-bottom:10px;line-height:1.6}
+.bm-link{display:inline-block;background:var(--accent);color:#fff;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:move;text-decoration:none;margin-bottom:8px}
+.bm-code{background:#0d1420;color:#00B4D8;padding:8px 12px;border-radius:6px;font-size:11px;font-family:'Courier New',monospace;word-break:break-all;line-height:1.5}
+
+/* BATCH TABLE */
+.batch-table{width:100%;border-collapse:collapse;font-size:12px}
+.batch-table th{background:var(--bg);padding:7px 10px;text-align:left;font-size:11px;color:var(--muted);border-bottom:2px solid var(--border)}
+.batch-table td{padding:7px 10px;border-bottom:1px solid var(--border)}
+.batch-table tr:hover td{background:#f8fafc}
+.score-chip{font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;color:#fff;display:inline-block}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:#1a2332;color:#fff;padding:10px 16px;border-radius:9px;font-size:12.5px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:999}
+.toast.show{opacity:1}
+
+/* RESET BTN */
+.reset-btn{background:transparent;border:1.5px solid var(--border);border-radius:8px;padding:7px 16px;font-size:12px;font-family:inherit;cursor:pointer;color:var(--muted)}
+.reset-btn:hover{border-color:var(--navy);color:var(--navy)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>📊 GEO Score Analyzer</h1>
+  <span class="badge">Option A · Phase 4 완성</span>
+  <span class="sub">Node.js 풀스택 · CORS 없는 서버분석 · PDF·Excel · 기사 재작성</span>
+</div>
+<div class="wrap">
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('single',this)">🔍 단일 분석</button>
+  <button class="tab" onclick="switchTab('batch',this)">📋 배치 분석</button>
+  <button class="tab" onclick="switchTab('compare',this)">🆚 경쟁사 비교</button>
+  <button class="tab" onclick="switchTab('site',this)">🌐 사이트 점검</button>
+  <button class="tab" onclick="switchTab('measure',this)">🧪 측정 루프</button>
+  <button class="tab" onclick="switchTab('history',this)">📜 분석 이력</button>
+  <button class="tab" onclick="switchTab('sov',this)">📡 SoV 실측</button>
+  <button class="tab" onclick="switchTab('tools',this)">🛠 도구</button>
+  <button class="tab dyn" id="resultsTab" onclick="switchTab('results',this)">📊 결과</button>
+  <button class="tab dyn" id="batchResultsTab" onclick="switchTab('batchResults',this)">📋 배치 결과</button>
+  <button class="tab dyn" id="compareResultsTab" onclick="switchTab('compareResults',this)">🆚 비교 결과</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     단일 분석
+══════════════════════════════════════════════════ -->
+<div class="section active" id="singleSection">
+  <div class="card">
+    <h2>기사 URL 입력</h2>
+    <p>Node.js 서버가 URL을 직접 가져옵니다. CORS 제약 없이 모든 URL 분석 가능합니다.</p>
+    <div class="row">
+      <input type="url" id="urlInput" placeholder="https://www.example.com/news/article/..."
+        onkeydown="if(event.key==='Enter')analyze()">
+      <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()">🌐 분석 시작</button>
+    </div>
+    <div class="banner" id="singleBanner"></div>
+    <details style="margin-top:10px">
+      <summary style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none">또는 HTML 소스 직접 붙여넣기 ▾</summary>
+      <div style="margin-top:9px">
+        <textarea class="textarea" id="htmlInput" rows="5"
+          placeholder="Ctrl+U → 전체선택 → 복사 → 여기에 붙여넣기"></textarea>
+        <button class="btn btn-outline" style="margin-top:7px;width:100%" onclick="analyzeHTML()">📋 붙여넣기 분석</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     배치 분석
+══════════════════════════════════════════════════ -->
+<div class="section" id="batchSection">
+  <div class="card">
+    <h2>복수 URL 배치 분석</h2>
+    <p>URL을 한 줄에 하나씩 입력하거나 CSV 파일을 업로드하세요. 최대 20개.</p>
+    <textarea class="textarea" id="batchInput" rows="8"
+      placeholder="https://www.example.com/news/article/1&#10;https://www.example.com/news/article/2"></textarea>
+    <div style="display:flex;gap:9px;margin-top:10px;align-items:center;flex-wrap:wrap">
+      <label class="btn btn-outline" style="cursor:pointer">
+        📁 CSV 업로드<input type="file" accept=".csv,.txt" style="display:none" onchange="loadCSV(this)">
+      </label>
+      <button class="btn btn-primary" id="batchBtn" onclick="runBatch()">⚡ 배치 분석</button>
+      <span id="batchProgress" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div class="banner" id="batchBanner" style="margin-top:9px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     경쟁사 비교
+══════════════════════════════════════════════════ -->
+<div class="section" id="compareSection">
+  <div class="card">
+    <h2>🆚 경쟁사 URL 비교</h2>
+    <p>두 기사를 동시에 분석해 항목별 점수 차이를 나란히 확인합니다.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:5px">🅰 내 기사</div>
+        <input type="url" id="urlA" class="row" style="width:100%;border:2px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px;font-family:inherit;outline:none" placeholder="https://내-기사-URL">
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--mid);margin-bottom:5px">🅱 경쟁사 기사</div>
+        <input type="url" id="urlB" class="row" style="width:100%;border:2px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px;font-family:inherit;outline:none" placeholder="https://경쟁사-기사-URL">
+      </div>
+    </div>
+    <button class="btn btn-primary" id="compareBtn" onclick="runCompare()" style="width:100%">🆚 비교 분석 시작</button>
+    <div class="banner" id="compareBanner" style="margin-top:9px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     사이트 점검 (v3 고도화 B)
+══════════════════════════════════════════════════ -->
+<div class="section" id="siteSection">
+  <div class="card">
+    <h2>🌐 사이트 점검</h2>
+    <p>기사 한 편이 아니라 매체 사이트 전체가 검색·AI에 인용될 준비가 됐는지 봅니다. AI 크롤러 허용 정책(학습 / AI 검색 / 실시간 열람), 사이트맵, llms.txt, 404 응답, 서버 렌더링, 매체·기자 정보, 네이버·빙 설정. <b>기사 URL</b>을 넣으면 그 기사 경로 기준으로 판정합니다.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input type="url" id="siteUrl" style="flex:1;min-width:260px;border:2px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px;font-family:inherit;outline:none" placeholder="https://www.media-a.example/news/articleView.html?idxno=… (기사 URL 권장)" onkeydown="if(event.key==='Enter')runSiteAudit()">
+      <button class="btn btn-primary" id="siteBtn" onclick="runSiteAudit()">🌐 점검 시작</button>
+    </div>
+    <div class="banner" id="siteBanner" style="margin-top:9px"></div>
+  </div>
+  <div id="siteResult"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     분석 이력
+══════════════════════════════════════════════════ -->
+<div class="section" id="historySection">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div><h2 style="margin-bottom:0">📜 분석 이력</h2><p style="margin:3px 0 0" class="card-sub" id="historySub">서버 DB에 자동 저장됩니다. 클릭하면 결과를 다시 볼 수 있습니다.</p></div>
+      <button class="btn btn-outline btn-sm" onclick="clearHistory()">🗑 전체 삭제</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  <!-- 📈 점수 추이 (Phase 3) -->
+  <div class="card">
+    <h2>📈 URL별 점수 추이</h2>
+    <p class="card-sub">같은 URL을 여러 번 분석하면 개선 전후 점수 변화를 시계열로 확인할 수 있습니다.</p>
+    <select id="tsUrlSelect" onchange="renderTsChart(this.value)" style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none;margin:8px 0">
+      <option value="">URL 선택...</option>
+    </select>
+    <div id="tsWrap" style="display:none;height:240px"><canvas id="tsChart"></canvas></div>
+    <p id="tsEmpty" style="font-size:12px;color:var(--muted)"></p>
+  </div>
+
+  <!-- 🔁 추적 URL (Phase 3) -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div><h2 style="margin-bottom:0">🔁 추적 URL (자동 재분석)</h2><p style="margin:3px 0 0" class="card-sub">등록하면 매일 새벽 6시(서버 가동 중일 때)에 자동 재분석되어 추이에 쌓입니다.</p></div>
+      <button class="btn btn-teal btn-sm" onclick="runTrackNow()">⚡ 지금 전체 재분석</button>
+    </div>
+    <div style="display:flex;gap:8px;margin:10px 0 6px">
+      <input type="url" id="trackInput" placeholder="https://추적할-기사-URL" style="flex:1;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none">
+      <button class="btn btn-primary btn-sm" onclick="addTrack()">＋ 등록</button>
+    </div>
+    <div id="trackList"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     측정 루프 (v3 고도화 C)
+══════════════════════════════════════════════════ -->
+<div class="section" id="measureSection">
+  <div class="card">
+    <div style="float:right"><a class="btn btn-outline btn-sm" href="/api/measure/export?download=1" title="GEO 대시보드의 'AI 인용·크롤러' 섹션에 올릴 파일">⬇ 대시보드용 내보내기</a></div>
+    <h2>🧪 개선 실험 — 기준선 → 수정 → <span class="mRemeasureDays">14</span>일 뒤 재측정</h2>
+    <p class="card-sub">"고쳤다"가 아니라 "숫자가 움직였다"까지가 완료입니다. ① 고치기 전에 기준선을 찍고 ② 기사를 고친 뒤 "수정 완료"를 누르면 ③ 재측정일이 예약되고, 서버가 켜져 있으면 그날 자동 재측정합니다.</p>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:10px">
+      <input type="url" id="expUrl" placeholder="https://고칠-기사-URL" class="m-in">
+      <input type="text" id="expName" placeholder="실험 이름 (예: JSON-LD 추가)" class="m-in">
+    </div>
+    <textarea id="expKws" rows="2" class="m-in" style="margin-top:8px;width:100%" placeholder="인용 여부를 볼 질문(줄바꿈·콤마 구분, 선택) — 예: 가상맙 CHMP 승인 권고 내용은?"></textarea>
+    <button class="btn btn-primary btn-sm" style="margin-top:8px" id="expBtn" onclick="createExp()">📍 기준선 기록</button>
+    <div class="banner" id="expBanner" style="margin-top:8px"></div>
+    <div id="expList" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2>📊 엔진별 AI 인용 현황</h2>
+    <p class="card-sub">질문·엔진별 가장 최근 기록 기준입니다. 마지막 기록이 <span class="mStaleDays">14</span>일보다 오래된 엔진은 <b>낡음</b>으로 표시하고 인용률을 흐리게 보여줍니다 — 오래된 값은 어떤 기준이든 통과해 버리기 때문입니다.</p>
+    <div id="engineTable"></div>
+  </div>
+
+  <div class="card">
+    <h2>✍️ 수동 인용 기록 <span style="font-size:11px;font-weight:400;color:var(--muted)">API가 없는 ChatGPT·구글 AI 개요·네이버 AI 브리핑 등</span></h2>
+    <p class="card-sub">질문을 직접 검색해 보고, 답변 출처에 우리 기사가 있었는지 기록하세요. 네이버는 모바일 앱에서 AI 브리핑 출처 칩을 확인합니다.</p>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:10px">
+      <input type="text" id="mcKw" list="mcKwList" placeholder="질문 (예: 다라정 FDA 승인 적응증)" class="m-in"><datalist id="mcKwList"></datalist>
+      <select id="mcEngine" class="m-in"></select>
+    </div>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px">
+      <label><input type="radio" name="mcCited" value="1"> ✅ 우리 기사 인용됨</label>
+      <label><input type="radio" name="mcCited" value="0" checked> ❌ 인용 안 됨</label>
+      <label><input type="checkbox" id="mcComp"> 경쟁 매체는 인용됨</label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <input type="url" id="mcUrl" placeholder="인용된 우리 기사 URL (선택)" class="m-in">
+      <input type="text" id="mcNote" placeholder="메모 (선택)" class="m-in">
+    </div>
+    <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveManualCitation()">＋ 기록</button>
+    <span id="mcStatus" style="font-size:11px;color:var(--muted);margin-left:8px"></span>
+  </div>
+
+  <div class="card">
+    <h2>🧠 LLMO 분기 점검 <span style="font-size:11px;font-weight:400;color:var(--muted)">AI 모델이 매체 자체를 아는가</span></h2>
+    <p class="card-sub">웹 검색(브라우징)을 끈 상태로 "○○가 뭐야?"를 묻고 결과를 기록합니다. 모름 → 학습 자료에 매체 서술이 부족 · 틀리게 앎 → 낡거나 엇갈린 서술 · 맞게 앎 → 유지. 분기마다 반복하세요.</p>
+    <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px;margin-top:10px">
+      <select id="llmoEngine" class="m-in"></select>
+      <input type="text" id="llmoQ" placeholder="질문 (예: 매체A가 뭐야?)" class="m-in">
+      <select id="llmoVerdict" class="m-in"></select>
+    </div>
+    <textarea id="llmoAnswer" rows="2" class="m-in" style="margin-top:8px;width:100%" placeholder="모델 답변 요약 (선택)"></textarea>
+    <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveLlmo()">＋ 기록</button>
+    <div id="llmoList" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2>🕷️ AI 크롤러 방문 <span style="font-size:11px;font-weight:400;color:var(--muted)">인용보다 먼저 움직이는 신호</span></h2>
+    <p class="card-sub">서버 접속 로그(Apache·Nginx 형식 등)를 올리면 날짜·봇별 방문 수를 집계합니다. 크롤링이 와야 인용이 옵니다. 같은 로그를 다시 올려도 중복 집계되지 않습니다. 로그를 받을 수 없으면 Cloudflare 등 호스팅 대시보드의 봇 통계를 참고하세요. (사용자 에이전트는 위조될 수 있어 정확한 값은 아닙니다.)</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+      <input type="file" id="crawlFile" accept=".log,.txt,.csv,.gz" style="font-size:12px">
+      <button class="btn btn-primary btn-sm" onclick="importCrawlLog()">⬆ 로그 올리기</button>
+      <span id="crawlStatus" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div id="crawlView" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SoV 실측 (Phase 4)
+══════════════════════════════════════════════════ -->
+<div class="section" id="sovSection">
+  <div class="card">
+    <h2>📡 실측 SoV 설정</h2>
+    <p class="card-sub">키워드를 Perplexity(검색형 AI)에 질의해 응답 인용 출처에 자사 기사가 실제로 포함되는지 측정합니다.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:10px">
+      <div>
+        <label style="font-size:11px;font-weight:700;color:var(--navy)">자사 도메인 (콤마 구분)</label>
+        <input type="text" id="sovMyDomains" placeholder="mynews.co.kr" style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none;margin-top:4px">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;color:var(--navy)">경쟁사 도메인 (콤마 구분, 선택)</label>
+        <input type="text" id="sovCompDomains" placeholder="rival1.co.kr, rival2.com" style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none;margin-top:4px">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;color:var(--navy)">Perplexity API 키</label>
+        <input type="password" id="sovKeyInput" placeholder="pplx-... (브라우저에만 저장)" style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none;margin-top:4px">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="saveSovConfig()">설정 저장</button>
+      <span id="sovConfigStatus" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div><h2 style="margin-bottom:0">🔑 측정 키워드</h2><p style="margin:3px 0 0" class="card-sub">독자가 AI에 물어볼 법한 질문형 키워드를 등록하세요. AI 정성 분석의 "인용 예상 질문"을 활용하면 좋습니다.</p></div>
+      <button class="btn btn-accent" onclick="runSov()" id="sovRunBtn">▶ 지금 측정</button>
+    </div>
+    <div style="display:flex;gap:8px;margin:10px 0 6px">
+      <input type="text" id="sovKwInput" placeholder="예: 전세사기 피해 지원 조건은?" onkeydown="if(event.key==='Enter')addSovKw()" style="flex:1;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none">
+      <button class="btn btn-primary btn-sm" onclick="addSovKw()">＋ 추가</button>
+    </div>
+    <div id="sovKwList"></div>
+  </div>
+
+  <div class="card" id="sovSummaryCard" style="display:none">
+    <h2>📊 SoV 현황</h2>
+    <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:10px 0">
+      <div style="text-align:center;min-width:110px">
+        <div id="sovNow" style="font-size:36px;font-weight:800;color:var(--navy)">-</div>
+        <div style="font-size:10px;color:var(--muted)">자사 SoV (최신 측정)</div>
+      </div>
+      <div style="text-align:center;min-width:110px">
+        <div id="sovComp" style="font-size:36px;font-weight:800;color:var(--accent)">-</div>
+        <div style="font-size:10px;color:var(--muted)">경쟁사 SoV</div>
+      </div>
+      <div style="flex:1;min-width:200px;font-size:12px;color:var(--muted)" id="sovCorr"></div>
+    </div>
+    <div id="sovSeriesWrap" style="display:none;height:220px"><canvas id="sovSeriesChart"></canvas></div>
+    <h3 style="font-size:13px;font-weight:700;color:var(--navy);margin:14px 0 6px">키워드별 최신 결과</h3>
+    <div id="sovLatestList"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     도구
+══════════════════════════════════════════════════ -->
+<div class="section" id="toolsSection">
+  <div class="card">
+    <h2>🤖 Claude AI 분석 설정</h2>
+    <p>AI 정성 분석·리라이팅에 사용할 Anthropic API 키를 입력하세요. 키는 이 브라우저(localStorage)에만 저장되며, 분석 요청 시에만 서버를 거쳐 Anthropic으로 전송됩니다.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+      <input type="password" id="aiKeyInput" placeholder="sk-ant-..." style="flex:1;min-width:240px;border:2px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px;font-family:inherit;outline:none">
+      <button class="btn btn-primary btn-sm" onclick="saveAiKey()">저장</button>
+      <button class="btn btn-sm" onclick="clearAiKey()" style="background:var(--border)">삭제</button>
+    </div>
+    <p id="aiKeyStatus" style="font-size:11px;color:var(--muted);margin-top:6px"></p>
+  </div>
+
+  <div class="card">
+    <h2>📊 SoV 대시보드 연동</h2>
+    <p>AI 검색엔진 유입 현황을 추적하는 GEO 대시보드와 연결합니다.</p>
+    <a class="sov-link" href="geo_dashboard.html" target="_blank">
+      <div class="sov-icon">📈</div>
+      <div class="sov-text">
+        <h4>GEO 효과측정 대시보드 열기</h4>
+        <p>ChatGPT · Gemini · Claude · Perplexity · Copilot 유입 트래킹 · SoV 비율 확인</p>
+      </div>
+      <span style="color:var(--muted);font-size:18px">→</span>
+    </a>
+  </div>
+
+  <div class="card">
+    <h2>🔖 "이 기사 점수 보기" 북마클릿</h2>
+    <p>브라우저 북마크에 추가하면 어떤 기사 페이지에서도 클릭 한 번으로 GEO 점수를 확인할 수 있습니다.</p>
+    <div class="bm-box">
+      <h4>설치 방법</h4>
+      <p>아래 버튼을 북마크 바로 드래그 앤 드롭하거나, 우클릭 → "북마크 추가"를 선택하세요.</p>
+      <a class="bm-link" id="bookmarkletLink" href="#" title="GEO Score 확인">📊 GEO Score 확인</a>
+      <div style="margin-top:8px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.5)">또는 아래 코드를 URL란에 직접 붙여넣기:</div>
+      <div class="bm-code" id="bookmarkletCode"></div>
+      <button class="btn btn-teal btn-sm" style="margin-top:8px" onclick="copyBM()">복사</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     단일 분석 결과
+══════════════════════════════════════════════════ -->
+<div class="section" id="resultsSection">
+  <div class="action-bar">
+    <button class="reset-btn" onclick="switchTab('single',document.querySelector('.tab'))">← 새 분석</button>
+    <span id="resultUrl" style="font-size:11px;color:var(--muted)"></span>
+    <div class="spacer"></div>
+    <button class="btn btn-success btn-sm" onclick="downloadPDF()">⬇ PDF</button>
+    <button class="btn btn-accent btn-sm" onclick="downloadExcel()">⬇ Excel</button>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="gauge-wrap">
+      <canvas id="gaugeChart"></canvas>
+      <div class="gauge-center"><div class="gscore" id="heroScore">0</div><div class="glabel">/ 100점</div></div>
+    </div>
+    <div class="hero-info">
+      <div class="gbadge" id="gradeBadge">-</div>
+      <h2 id="gradeTitle"></h2>
+      <div class="hero-sum" id="heroSum"></div>
+      <div class="sbars">
+        <div class="sbar"><div class="sbar-lbl">SEO 기반</div><div class="sbar-track"><div class="sbar-fill" id="seoBar" style="background:var(--cyan);width:0%"></div></div><div class="sbar-val" id="seoVal">0/50</div></div>
+        <div class="sbar"><div class="sbar-lbl">GEO 특화</div><div class="sbar-track"><div class="sbar-fill" id="geoBar" style="background:var(--accent);width:0%"></div></div><div class="sbar-val" id="geoVal">0/50</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="indexGate"></div>
+
+  <div class="charts-row">
+    <div class="chart-card"><h3>📡 카테고리별</h3><div class="cw"><canvas id="radarChart"></canvas></div></div>
+    <div class="chart-card"><h3>📋 항목별 달성률</h3><div class="cw"><canvas id="barChart"></canvas></div></div>
+  </div>
+
+  <div class="card" style="padding:18px">
+    <h3 style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">✅ 항목별 상세</h3>
+    <span class="sec-lbl sl-seo">SEO (50점)</span>
+    <table id="seoTable"><thead><tr><th>항목</th><th>점수</th><th>상태</th><th>세부</th></tr></thead><tbody></tbody></table>
+    <span class="sec-lbl sl-geo">GEO (50점)</span>
+    <table id="geoTable"><thead><tr><th>항목</th><th>점수</th><th>상태</th><th>세부</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <!-- 🤖 AI 정성 분석 (Phase 2) -->
+  <div class="card" id="aiCard" style="padding:18px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <h3 style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px">🤖 AI 정성 분석 (Claude)</h3>
+        <p style="font-size:11px;color:var(--muted);margin:0">룰 점수와 별개로, AI 검색엔진이 이 기사를 실제로 인용할 만한지 5축으로 평가합니다. 도구 탭에서 API 키 설정 필요.</p>
+      </div>
+      <button class="btn btn-primary btn-sm" id="aiAnalyzeBtn" onclick="runAiAnalyze()">🤖 AI 평가 실행</button>
+      <button class="btn btn-accent btn-sm" id="aiRewriteBtn" onclick="runAiRewrite()">✨ AI 리라이팅</button>
+    </div>
+    <div id="aiReviewBody" style="display:none;margin-top:14px"></div>
+  </div>
+
+  <!-- ✍️ GEO 최적화 기사 재작성 -->
+  <div class="rw-card" id="rewriteCard">
+    <div class="rw-header">
+      <div style="flex:1">
+        <h3>✍️ GEO 최적화 기사 재작성</h3>
+        <p>분석 결과 기반으로 제목·메타·첫문단·본문·JSON-LD를 자동 최적화합니다. 수정 후 복사하세요.</p>
+      </div>
+      <button class="btn btn-accent" onclick="buildRewrite()">⚡ 재작성 생성</button>
+    </div>
+    <div class="rw-body" id="rewriteBody">
+      <div class="rw-sec">
+        <div class="rw-sec-head">
+          <div class="rw-sec-title">📌 제목 <span class="rw-tag tag-both">SEO+GEO</span></div>
+          <span class="char-count" id="rwTitleCount"></span>
+        </div>
+        <div class="rw-hint" id="rwTitleHint"></div>
+        <input type="text" class="rw-textarea" id="rwTitle" style="height:42px;line-height:1.4"
+          oninput="rCharCount('rwTitle','rwTitleCount',45,65)" placeholder="최적화 제목 (45-65자)">
+      </div>
+      <div class="rw-sec">
+        <div class="rw-sec-head">
+          <div class="rw-sec-title">🔍 메타 디스크립션 <span class="rw-tag tag-seo">SEO</span></div>
+          <span class="char-count" id="rwMetaCount"></span>
+        </div>
+        <div class="rw-hint" id="rwMetaHint"></div>
+        <textarea class="rw-textarea" id="rwMeta" rows="3" oninput="rCharCount('rwMeta','rwMetaCount',120,160)"></textarea>
+      </div>
+      <div class="rw-sec">
+        <div class="rw-sec-head">
+          <div class="rw-sec-title">🎯 첫 문단 (AI 인용 핵심) <span class="rw-tag tag-geo">GEO</span></div>
+          <span class="char-count" id="rwFirstCount"></span>
+        </div>
+        <div class="rw-hint" id="rwFirstHint"></div>
+        <textarea class="rw-textarea" id="rwFirst" rows="4" oninput="rCharCount('rwFirst','rwFirstCount',100,300)"></textarea>
+      </div>
+      <div class="rw-sec">
+        <div class="rw-sec-head">
+          <div class="rw-sec-title">📝 본문 <span class="rw-tag tag-both">SEO+GEO</span></div>
+          <span class="char-count" id="rwBodyCount"></span>
+        </div>
+        <div class="rw-hint" id="rwBodyHint"></div>
+        <textarea class="rw-textarea" id="rwBody" rows="10" oninput="rCharCount('rwBody','rwBodyCount',800,5000)"></textarea>
+      </div>
+      <div class="rw-sec">
+        <div class="rw-sec-head">
+          <div class="rw-sec-title">🗂 JSON-LD 구조화 데이터 <span class="rw-tag tag-geo">GEO</span></div>
+          <button class="btn btn-teal btn-sm" onclick="copyField('rwJsonld')">복사</button>
+        </div>
+        <div class="rw-hint" id="rwJsonldHint"></div>
+        <textarea class="rw-textarea mono" id="rwJsonld" rows="13"></textarea>
+      </div>
+      <div class="copy-bar">
+        <p>📋 모든 필드 수정 후 전체 복사 → CMS에 붙여넣기<br>
+        <b>기사 전문 복사</b>는 제목+메타+첫문단+본문을 하나로 합칩니다.</p>
+        <button class="btn btn-teal btn-sm" onclick="copyField('rwJsonld')">JSON-LD 복사</button>
+        <button class="btn btn-success" onclick="copyAll()">📄 기사 전문 복사</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     배치 결과
+══════════════════════════════════════════════════ -->
+<div class="section" id="batchResultsSection">
+  <div class="action-bar">
+    <button class="reset-btn" onclick="switchTab('batch',document.querySelectorAll('.tab')[1])">← 새 배치</button>
+    <span id="batchResultCount" style="font-size:12px;color:var(--muted)"></span>
+    <div class="spacer"></div>
+    <button class="btn btn-accent btn-sm" onclick="downloadBatchExcel()">⬇ 전체 Excel</button>
+  </div>
+  <div class="card" style="padding:16px;overflow-x:auto">
+    <table class="batch-table" id="batchTable">
+      <thead><tr><th>#</th><th>URL</th><th>총점</th><th>등급</th><th>SEO</th><th>GEO</th><th>상태</th><th>상세</th></tr></thead>
+      <tbody id="batchTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     비교 결과
+══════════════════════════════════════════════════ -->
+<div class="section" id="compareResultsSection">
+  <div class="action-bar">
+    <button class="reset-btn" onclick="switchTab('compare',document.querySelectorAll('.tab')[2])">← 다시 비교</button>
+    <div class="spacer"></div>
+    <button class="btn btn-accent btn-sm" onclick="downloadCompareExcel()">⬇ 비교 Excel</button>
+  </div>
+  <div class="cmp-grid" id="cmpHeroGrid"></div>
+  <div class="card" style="padding:16px;overflow-x:auto">
+    <h3 style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">🔍 항목별 점수 비교</h3>
+    <table id="cmpTable">
+      <thead><tr><th>항목</th><th>구분</th><th>🅰 내 기사</th><th>🅱 경쟁사</th><th>차이</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── GLOBALS ───────────────────────────────────────────────────
+const API = '';
+let _last = null, _batchResults = [], _compareResult = null;
+let gaugeC, radarC, barC;
+const GRADE_COLORS = {A:'#22c55e',B:'#3b82f6',C:'#f59e0b',D:'#f97316',F:'#ef4444'};
+const GRADE_TITLES = {A:'GEO 최적화 우수',B:'GEO 최적화 양호',C:'보통 — 개선 여지',D:'미흡 — 보완 필요',F:'최적화 시작 필요'};
+
+// ── TABS ──────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(name + 'Section').classList.add('active');
+  if (name === 'history') { renderHistory(); loadTsUrls(); renderTracked(); }
+  if (name === 'sov')     initSov();
+  if (name === 'measure') initMeasure();
+  if (name === 'tools')   { initTools(); updateAiKeyStatus(); }
+}
+
+// ── BANNER ────────────────────────────────────────────────────
+function showBanner(id, t, m) {
+  const e = document.getElementById(id);
+  e.className = 'banner b' + t; e.style.display = 'block'; e.innerHTML = m;
+}
+function hideBanner(id) { document.getElementById(id).style.display = 'none'; }
+
+// ── ANALYZE (single) ──────────────────────────────────────────
+async function analyze() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url.startsWith('http')) { showBanner('singleBanner','e','❌ 올바른 URL을 입력하세요.'); return; }
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>분석 중...';
+  showBanner('singleBanner','l','<span class="spinner"></span> 서버에서 URL을 가져오는 중...');
+  try {
+    const res = await fetch(API + '/api/analyze', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '서버 오류');
+    hideBanner('singleBanner');
+    showResults(data);
+    saveHistory(data);
+  } catch(e) { showBanner('singleBanner','e','❌ ' + e.message); }
+  btn.disabled = false; btn.innerHTML = '🌐 분석 시작';
+}
+
+async function analyzeHTML() {
+  const html = document.getElementById('htmlInput').value.trim();
+  if (!html) { showBanner('singleBanner','e','내용을 붙여넣어 주세요.'); return; }
+  showBanner('singleBanner','l','<span class="spinner"></span> 분석 중...');
+  try {
+    const res = await fetch(API + '/api/analyze', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ html }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '서버 오류');
+    hideBanner('singleBanner');
+    showResults(data);
+    saveHistory(data);
+  } catch(e) { showBanner('singleBanner','e','❌ ' + e.message); }
+}
+
+// ── 측정 루프 (v3 고도화 C) ───────────────────────────────────
+let _mMeta = null;
+const mEsc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mDay = iso => iso ? String(iso).slice(0, 10) : '-';
+async function mApi(path, opt = {}) {
+  const res = await fetch(API + path, opt);
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(d.error || '서버 오류');
+  return d;
+}
+async function initMeasure() {
+  try {
+    if (!_mMeta) {
+      _mMeta = await mApi('/api/measure/meta');
+      document.querySelectorAll('.mRemeasureDays').forEach(e => e.textContent = _mMeta.remeasureDays);
+      document.querySelectorAll('.mStaleDays').forEach(e => e.textContent = _mMeta.staleDays);
+      document.getElementById('mcEngine').innerHTML = _mMeta.manualEngines.map(e => `<option value="${e.key}">${mEsc(e.label)}</option>`).join('');
+      document.getElementById('llmoEngine').innerHTML = _mMeta.llmoEngines.map(e => `<option value="${e.key}">${mEsc(e.label)}</option>`).join('');
+      document.getElementById('llmoVerdict').innerHTML = Object.entries(_mMeta.llmoVerdicts).map(([k, v]) => `<option value="${k}">${mEsc(v)}</option>`).join('');
+    }
+  } catch (e) { showBanner('expBanner', 'e', '❌ ' + e.message); return; }
+  renderExps(); renderEngineTable(); renderLlmo(); renderCrawl();
+  mApi('/api/sov/keywords').then(k => { document.getElementById('mcKwList').innerHTML = k.map(x => `<option value="${mEsc(x.keyword)}">`).join(''); }).catch(() => {});
+}
+
+// 실험
+async function createExp() {
+  const url = document.getElementById('expUrl').value.trim();
+  if (!url) { showBanner('expBanner', 'e', '기사 URL을 입력하세요.'); return; }
+  const btn = document.getElementById('expBtn'); btn.disabled = true;
+  showBanner('expBanner', 'l', '<span class="spinner"></span> 지금 상태를 채점해 기준선으로 저장하는 중...');
+  try {
+    await mApi('/api/exp', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, name: document.getElementById('expName').value.trim(), keywords: document.getElementById('expKws').value }) });
+    showBanner('expBanner', 's', '✅ 기준선을 기록했습니다. 기사를 고친 뒤 "수정 완료"를 누르세요.');
+    ['expUrl', 'expName', 'expKws'].forEach(id => document.getElementById(id).value = '');
+    renderExps();
+  } catch (e) { showBanner('expBanner', 'e', '❌ ' + e.message); }
+  btn.disabled = false;
+}
+async function renderExps() {
+  const el = document.getElementById('expList');
+  try {
+    const d = await mApi('/api/exp');
+    if (!d.items.length) { el.innerHTML = '<p style="font-size:12px;color:var(--muted)">아직 실험이 없습니다.</p>'; return; }
+    const col = { baseline: 'var(--muted)', waiting: 'var(--cyan)', due: '#b45309', done: 'var(--green)' };
+    el.innerHTML = d.items.map(x => {
+      const r = x.report;
+      const act = x.status.code === 'baseline'
+        ? `<input type="text" id="expNote${x.id}" placeholder="무엇을 고쳤나요? (예: NewsArticle JSON-LD 추가)" class="m-in" style="flex:1;min-width:200px"><button class="btn btn-primary btn-sm" onclick="markChanged(${x.id})">✔ 수정 완료</button>`
+        : x.status.code !== 'done' ? `<button class="btn btn-teal btn-sm" onclick="remeasureExp(${x.id})" id="rmBtn${x.id}">🔁 지금 재측정${x.status.code === 'waiting' ? ' (이르게)' : ''}</button>` : `<button class="btn btn-outline btn-sm" onclick="remeasureExp(${x.id})" id="rmBtn${x.id}">🔁 다시 재측정</button>`;
+      const rep = r ? `<pre class="m-pre">${mEsc(r.text)}</pre>
+        ${r.warnings.length ? `<ul class="m-warn">${r.warnings.map(w => `<li>${mEsc(w)}</li>`).join('')}</ul>` : ''}
+        ${r.criteria.length ? `<div style="font-size:11.5px;margin-top:4px"><b>항목 변화</b> ${r.criteria.map(c => `<span class="m-chip ${c.delta > 0 ? 'm-up' : c.delta < 0 ? 'm-down' : ''}">${mEsc(c.label)} ${c.before ?? '신규'}→${c.after}</span>`).join(' ')}</div>` : ''}
+        ${r.citations.after.byEngine.length ? `<div style="font-size:11.5px;margin-top:4px"><b>수정 후 인용</b> ${r.citations.after.byEngine.map(e => `<span class="m-chip">${mEsc(e.label)} ${e.cited}/${e.n}</span>`).join(' ')}</div>` : ''}
+        <button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="navigator.clipboard.writeText(${mEsc(JSON.stringify(r.text))});toast('보고서 복사됨')">📋 보고서 복사</button>` : '';
+      return `<div class="m-exp">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div><b>${mEsc(x.name || '(이름 없음)')}</b> <span style="font-size:11px;color:${col[x.status.code]}">● ${mEsc(x.status.label)}</span>
+            <div style="font-size:10.5px;color:var(--muted)">${mEsc(x.url.slice(0, 90))}</div>
+            <div style="font-size:11px;margin-top:2px">기준선 ${mDay(x.baselineAt)} · ${x.baselineTotal}점(${mEsc(x.baselineGrade)})${x.changedAt ? ` · 수정 ${mDay(x.changedAt)}${x.changeNote ? ' — ' + mEsc(x.changeNote) : ''} · 재측정 예약 ${mDay(x.dueAt)}` : ''}${x.resultAt ? ` · 재측정 ${mDay(x.resultAt)} ${x.resultTotal}점` : ''}${x.keywords && x.keywords.length ? ` · 질문 ${x.keywords.length}개` : ''}</div>
+          </div>
+          <button class="hist-del" onclick="deleteExp(${x.id})" title="삭제">✕</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${act}</div>${rep}</div>`;
+    }).join('');
+  } catch (e) { el.innerHTML = `<p style="font-size:12px;color:var(--red)">❌ ${mEsc(e.message)}</p>`; }
+}
+async function markChanged(id) {
+  const note = (document.getElementById('expNote' + id) || {}).value || '';
+  try { await mApi(`/api/exp/${id}/changed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note }) }); toast('재측정일을 예약했습니다.'); renderExps(); }
+  catch (e) { toast('❌ ' + e.message); }
+}
+async function remeasureExp(id) {
+  const b = document.getElementById('rmBtn' + id); if (b) { b.disabled = true; b.innerHTML = '<span class="spinner"></span> 재측정 중...'; }
+  try { await mApi(`/api/exp/${id}/remeasure`, { method: 'POST' }); toast('재측정 완료'); }
+  catch (e) { toast('❌ ' + e.message); }
+  renderExps();
+}
+async function deleteExp(id) {
+  try { await mApi(`/api/exp/${id}`, { method: 'DELETE' }); renderExps(); } catch (e) { toast('❌ ' + e.message); }
+}
+
+// 엔진별 인용 현황
+async function renderEngineTable() {
+  const el = document.getElementById('engineTable');
+  try {
+    const s = await mApi('/api/sov/summary');
+    const rows = s.engines || [];
+    if (!rows.length) { el.innerHTML = '<p style="font-size:12px;color:var(--muted)">인용 기록이 없습니다. SoV 탭의 자동 측정이나 아래 수동 기록으로 시작하세요.</p>'; return; }
+    el.innerHTML = `<table><thead><tr><th>엔진</th><th>인용률</th><th>인용/질문</th><th>마지막 기록</th></tr></thead><tbody>${rows.sort((a, b) => b.n - a.n).map(e =>
+      `<tr style="${e.stale ? 'opacity:.5' : ''}"><td><b>${mEsc(e.label)}</b></td><td><b>${e.rate}%</b></td><td>${e.cited}/${e.n}</td><td>${mDay(e.lastAt)}${e.stale ? ' <span class="m-chip m-down">낡음</span>' : ''}</td></tr>`).join('')}</tbody></table>`;
+  } catch (e) { el.innerHTML = `<p style="font-size:12px;color:var(--red)">❌ ${mEsc(e.message)}</p>`; }
+}
+async function saveManualCitation() {
+  const keyword = document.getElementById('mcKw').value.trim();
+  if (!keyword) { toast('질문을 입력하세요.'); return; }
+  try {
+    await mApi('/api/citations/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      keyword, engine: document.getElementById('mcEngine').value,
+      cited: document.querySelector('input[name="mcCited"]:checked').value === '1',
+      compCited: document.getElementById('mcComp').checked,
+      citedUrl: document.getElementById('mcUrl').value.trim(), note: document.getElementById('mcNote').value.trim() }) });
+    document.getElementById('mcStatus').textContent = '✅ 기록됨 — ' + new Date().toLocaleTimeString('ko-KR');
+    ['mcUrl', 'mcNote'].forEach(id => document.getElementById(id).value = '');
+    renderEngineTable();
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+// LLMO
+async function saveLlmo() {
+  const question = document.getElementById('llmoQ').value.trim();
+  if (!question) { toast('질문을 입력하세요.'); return; }
+  try {
+    await mApi('/api/llmo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      engine: document.getElementById('llmoEngine').value, question,
+      verdict: document.getElementById('llmoVerdict').value, answer: document.getElementById('llmoAnswer').value.trim() }) });
+    document.getElementById('llmoAnswer').value = ''; toast('LLMO 점검 기록됨'); renderLlmo();
+  } catch (e) { toast('❌ ' + e.message); }
+}
+async function renderLlmo() {
+  const el = document.getElementById('llmoList');
+  try {
+    const d = await mApi('/api/llmo');
+    if (!d.items.length) { el.innerHTML = '<p style="font-size:12px;color:var(--muted)">기록 없음 — 첫 점검을 해 보세요.</p>'; return; }
+    const vc = { unknown: 'var(--muted)', wrong: 'var(--red)', correct: 'var(--green)' };
+    el.innerHTML = `<p style="font-size:11.5px;margin-bottom:6px">마지막 점검 ${mDay(d.lastAt)} · 다음 권장 ${mDay(d.nextDue)}${d.stale ? ' <span class="m-chip m-down">점검 시기 지남</span>' : ''}</p>
+      <table><thead><tr><th>날짜</th><th>모델</th><th>질문</th><th>판정</th><th>답변 요약</th></tr></thead><tbody>${d.items.slice(0, 30).map(x =>
+      `<tr><td>${mDay(x.checkedAt)}</td><td>${mEsc(x.label)}</td><td>${mEsc(x.question)}</td><td style="color:${vc[x.verdict]};font-weight:700">${mEsc(x.verdictLabel)}</td><td style="font-size:11px;color:var(--muted)">${mEsc(x.answer.slice(0, 120))}</td></tr>`).join('')}</tbody></table>`;
+  } catch (e) { el.innerHTML = `<p style="font-size:12px;color:var(--red)">❌ ${mEsc(e.message)}</p>`; }
+}
+
+// AI 크롤러
+async function importCrawlLog() {
+  const f = document.getElementById('crawlFile').files[0];
+  if (!f) { toast('로그 파일을 선택하세요.'); return; }
+  if (/\.gz$/i.test(f.name)) { toast('압축(.gz)을 푼 로그 파일을 올려 주세요.'); return; }
+  const st = document.getElementById('crawlStatus'); st.textContent = '집계 중...';
+  try {
+    const text = await f.text();
+    const r = await mApi('/api/crawlers/import?source=' + encodeURIComponent(f.name), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: text });
+    st.textContent = `✅ ${r.lines.toLocaleString()}줄 중 AI·검색 봇 ${r.matched.toLocaleString()}건, ${r.days}일치 (${r.bots.join(', ') || '봇 없음'})${r.undated ? ` · 날짜 못 읽은 줄 ${r.undated}` : ''}`;
+    renderCrawl();
+  } catch (e) { st.textContent = '❌ ' + e.message; }
+}
+async function renderCrawl() {
+  const el = document.getElementById('crawlView');
+  try {
+    const d = await mApi('/api/crawlers?days=90');
+    if (!d.series.length) { el.innerHTML = '<p style="font-size:12px;color:var(--muted)">아직 올린 로그가 없습니다.</p>'; return; }
+    const G = [['search', 'AI 검색 색인'], ['user', '실시간 열람'], ['training', '학습용'], ['engine', '검색엔진']];
+    const last = d.series.slice(-14);
+    const max = Math.max(1, ...last.map(x => x.search + x.user + x.training));
+    el.innerHTML = `${d.stale ? '<p class="m-warn" style="list-style:none">⚠️ 마지막 로그 날짜가 ' + mDay(d.lastDay) + '입니다. 최신 로그를 올려야 추이를 믿을 수 있습니다.</p>' : ''}
+      <table><thead><tr><th>날짜</th>${G.map(g => `<th>${g[1]}</th>`).join('')}<th style="width:30%">AI 봇 합계</th></tr></thead><tbody>${last.map(x => {
+        const ai = x.search + x.user + x.training;
+        return `<tr><td>${x.day}</td>${G.map(g => `<td>${(x[g[0]] || 0).toLocaleString()}</td>`).join('')}<td><div style="height:8px;border-radius:4px;background:var(--cyan);width:${Math.round(ai / max * 100)}%"></div></td></tr>`;
+      }).join('')}</tbody></table>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px">90일 봇별 합계: ${Object.entries(d.byBot).sort((a, b) => b[1] - a[1]).map(([b, n]) => `${mEsc(b)} ${n.toLocaleString()}`).join(' · ')}</p>`;
+  } catch (e) { el.innerHTML = `<p style="font-size:12px;color:var(--red)">❌ ${mEsc(e.message)}</p>`; }
+}
+
+// ── 사이트 점검 (v3 고도화 B) ─────────────────────────────────
+async function runSiteAudit() {
+  const url = document.getElementById('siteUrl').value.trim();
+  if (!url) { showBanner('siteBanner','e','사이트 또는 기사 URL을 입력하세요.'); return; }
+  const btn = document.getElementById('siteBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>점검 중...';
+  showBanner('siteBanner','l','<span class="spinner"></span> robots.txt·사이트맵·llms.txt·404·기사 페이지를 확인하는 중... (10~30초)');
+  try {
+    const res = await fetch(API + '/api/site', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || '서버 오류');
+    hideBanner('siteBanner');
+    renderSiteAudit(d);
+  } catch (e) { showBanner('siteBanner','e','❌ ' + e.message); }
+  btn.disabled = false; btn.innerHTML = '🌐 점검 시작';
+}
+function renderSiteAudit(d) {
+  const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const icon = { ok:'✅', warn:'⚠️', fail:'❌', info:'ℹ️' };
+  const sum = d.summary;
+  const bots = d.crawler.map(g => `<div class="bot-card"><h4>${esc(g.label)}</h4><p>${esc(g.desc)}</p>${g.bots.map(b =>
+    `<div class="bot-row"><span>${esc(b.bot)}</span><span class="${b.allowedArticle ? 'st-ok' : 'st-fail'}" title="${esc(b.rule)}">${b.allowedArticle ? '허용' : '차단'}${b.rule && !b.allowedArticle ? ' · ' + esc(b.rule) : ''}</span></div>`).join('')}</div>`).join('');
+  const areas = [...new Set(d.items.map(i => i.area))];
+  const tables = areas.map(a => `<span class="sec-lbl sl-geo" style="margin-top:12px;display:inline-block">${esc(a)}</span>
+    <table><thead><tr><th style="width:24%">항목</th><th style="width:7%">판정</th><th>근거</th><th style="width:34%">고칠 방법</th></tr></thead><tbody>${
+    d.items.filter(i => i.area === a).map(i => `<tr><td><b>${esc(i.label)}</b></td><td class="st-${i.status}">${icon[i.status]}</td><td style="font-size:11px">${esc(i.evidence)}</td><td style="font-size:11px;color:var(--muted)">${esc(i.fix)}</td></tr>`).join('')}</tbody></table>`).join('');
+  const art = d.article ? `<p style="font-size:11.5px;margin-top:6px">기준 기사 채점: <b>${d.article.total}점 (${esc(d.article.grade)})</b> · ${esc(d.article.indexability?.label || '')}</p>` : '';
+  document.getElementById('siteResult').innerHTML = `
+    <div class="card"><h2 style="margin-bottom:8px">${esc(d.origin)}</h2>
+      <div class="site-sum"><div><b class="st-ok">${sum.ok}</b>통과</div><div><b class="st-warn">${sum.warn}</b>주의</div><div><b class="st-fail">${sum.fail}</b>문제</div><div><b class="st-info">${sum.info}</b>참고</div></div>
+      <p style="font-size:10.5px;color:var(--muted)">점검 ${new Date(d.checkedAt).toLocaleString('ko-KR')}${d.articleUrl ? ' · 기준 기사: ' + esc(d.articleUrl.slice(0, 80)) : ' · 기사 URL 없이 홈 기준'}</p>${art}
+    </div>
+    <div class="card"><h2 style="margin-bottom:8px">🤖 AI 크롤러 허용 현황 (robots.txt)</h2>
+      <p style="font-size:11.5px;margin-bottom:8px">인용이 목표라면 <b>AI 검색 색인·실시간 열람·검색엔진</b>은 허용해야 합니다. 학습용 차단은 매체 정책 선택입니다. (robots.txt는 권고 규약이라 모든 봇이 지킨다는 보장은 없습니다.)</p>
+      <div class="bot-grid">${bots}</div></div>
+    <div class="card">${tables}</div>`;
+}
+
+// ── 색인·인용 게이트 (v3) ──────────────────────────────────────
+function gateChip(r) {
+  const g = r && r.indexability; if (!g || g.status === 'ok') return '';
+  return `<span class="gate-chip gc-${g.status}" title="${(g.blockers.concat(g.limits)).map(x=>x.message).join(' / ').replace(/"/g,'&quot;')}">${g.status==='blocked'?'⛔ 인용 불가':'⚠ 인용 제한'}</span>`;
+}
+function renderGate(r) {
+  const el = document.getElementById('indexGate'); if (!el) return;
+  const g = r.indexability;
+  if (!g) { el.innerHTML = ''; return; }
+  const esc = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const note = g.headerChecked ? '' : '<div style="opacity:.75;font-size:11px;margin-top:4px">※ HTML 붙여넣기 분석이라 서버 응답 헤더(X-Robots-Tag)는 확인하지 못했습니다. URL로 분석하면 헤더까지 봅니다.</div>';
+  const extra = g.dataNosnippet ? `<div style="font-size:11px;margin-top:4px">참고: data-nosnippet 영역 ${g.dataNosnippet}곳 — 이 부분은 구글 스니펫·AI 개요에 쓰이지 않습니다.</div>` : '';
+  const inj = r.injectionSignals || [];
+  const injHtml = inj.length ? `<div class="gate gate-limited">🛡️ <b>AI 대상 지시문 ${inj.length}건 발견</b> — 페이지에 AI에게 명령하는 문장이 있습니다${inj.some(x=>x.where!=='visible')?' (숨김 요소·주석 포함)':''}. 검색엔진에는 클로킹·스팸 신호이고, AI 분석은 이 문장을 무시하도록 처리됩니다. 외부 삽입(해킹·광고 스크립트)인지 확인하세요.<ul>${inj.slice(0,4).map(x=>`<li>[${esc(x.where==='hidden'?'숨김 요소':x.where==='comment'?'HTML 주석':x.where==='meta'?'메타 태그':'본문')}] ${esc(x.snippet)}</li>`).join('')}</ul></div>` : '';
+  if (g.status === 'ok') {
+    el.innerHTML = injHtml + `<div class="gate gate-ok">✅ <b>색인·인용 가능</b> — robots 메타${g.headerChecked?'·X-Robots-Tag 헤더':''}에 차단 지시어가 없습니다.${extra}${note}</div>`;
+    return;
+  }
+  const items = g.blockers.concat(g.limits).map(x => `<li>${esc(x.message)}</li>`).join('');
+  const lead = g.status === 'blocked'
+    ? '점수와 관계없이 이 페이지는 검색 결과와 AI 답변에 인용될 수 없습니다. 아래 지시어부터 제거하세요.'
+    : '색인은 되지만 본문 발췌가 막혀 구글 AI 개요 등에서 인용이 제한됩니다.';
+  el.innerHTML = injHtml + `<div class="gate gate-${g.status}">${g.status==='blocked'?'⛔':'⚠️'} <b>${esc(g.label)}</b><br>${lead}<ul>${items}</ul>${extra}${note}</div>`;
+}
+
+// ── SHOW RESULTS ──────────────────────────────────────────────
+function showResults(r) {
+  _last = r;
+  const {scores, details, totals, grade, criteria, url} = r;
+  const {total, seoTotal, geoTotal} = totals;
+  const gc = GRADE_COLORS[grade] || '#94a3b8';
+
+  document.getElementById('heroScore').textContent = total;
+  const gb = document.getElementById('gradeBadge');
+  gb.textContent = grade; gb.className = 'gbadge g' + grade;
+  document.getElementById('gradeTitle').textContent = GRADE_TITLES[grade] || '';
+  document.getElementById('heroSum').innerHTML =
+    `SEO 기반 <b>${seoTotal}/50점</b> &nbsp;·&nbsp; GEO 특화 <b>${geoTotal}/50점</b><br>
+    <span style="opacity:.65;font-size:11px">${url || '(HTML 직접 분석)'}</span>`;
+  document.getElementById('seoBar').style.width = (seoTotal*2)+'%';
+  document.getElementById('seoVal').textContent = `${seoTotal}/50`;
+  document.getElementById('geoBar').style.width = (geoTotal*2)+'%';
+  document.getElementById('geoVal').textContent = `${geoTotal}/50`;
+  document.getElementById('resultUrl').textContent = url ? url.slice(0,70) : '';
+  renderGate(r);
+
+  if (gaugeC) gaugeC.destroy();
+  gaugeC = new Chart(document.getElementById('gaugeChart').getContext('2d'), {
+    type:'doughnut', data:{datasets:[{data:[total,100-total], backgroundColor:[gc,'rgba(255,255,255,.15)'], borderWidth:0, cutout:'76%'}]},
+    options:{responsive:true, maintainAspectRatio:true, plugins:{legend:{display:false}, tooltip:{enabled:false}}}
+  });
+
+  const cats = {'제목·메타':['title_exists','title_length','meta_exists','meta_length'],'헤딩 구조':['h1_count','h2_count'],'링크·이미지':['img_alt','internal_links','external_links'],'콘텐츠':['content_length','canonical'],'팩트 밀도':['fact_numbers','fact_dates'],'GEO 구조':['first_para','para_citability','ld_json','article_schema','ld_consistency','structure_lists','question_headings','author','pub_date']};
+  const ckeys = Object.keys(cats);
+  const cdata = ckeys.map(cat => {
+    const ids = cats[cat];
+    const got = ids.reduce((s,id) => s+(scores[id]||0), 0);
+    const mx  = ids.reduce((s,id) => s+(criteria.find(c=>c.id===id)?.max||0), 0);
+    return mx ? Math.round((got/mx)*100) : 0;
+  });
+  if (radarC) radarC.destroy();
+  radarC = new Chart(document.getElementById('radarChart').getContext('2d'), {
+    type:'radar', data:{labels:ckeys, datasets:[{data:cdata, backgroundColor:'rgba(0,180,216,.2)', borderColor:'#00B4D8', borderWidth:2, pointBackgroundColor:'#065A82', pointRadius:4}]},
+    options:{responsive:true, maintainAspectRatio:false, scales:{r:{min:0,max:100,ticks:{display:false}}}, plugins:{legend:{display:false}}}
+  });
+  if (barC) barC.destroy();
+  barC = new Chart(document.getElementById('barChart').getContext('2d'), {
+    type:'bar', data:{labels:criteria.map(c=>c.label.slice(0,14)), datasets:[{data:criteria.map(c=>Math.round(((scores[c.id]||0)/c.max)*100)), backgroundColor:criteria.map(c=>c.group==='seo'?'#1C7293':'#FF6B35'), borderRadius:3}]},
+    options:{responsive:true, maintainAspectRatio:false, indexAxis:'y', scales:{x:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:9}}},y:{ticks:{font:{size:9}}}}, plugins:{legend:{display:false}}}
+  });
+
+  ['seo','geo'].forEach(grp => {
+    const tbody = document.querySelector('#'+grp+'Table tbody'); tbody.innerHTML = '';
+    criteria.filter(c=>c.group===grp).forEach(c => {
+      const got = scores[c.id]||0; const ratio = got/c.max;
+      const dc = ratio>=.8?'dp':ratio>=.4?'dw':'df';
+      const pc = ratio>=.8?'pp':ratio>=.4?'pw':'pf';
+      tbody.innerHTML += `<tr><td><b>${c.label}</b><div class="dtxt">${c.cat}</div></td><td><span class="pill ${pc}">${got}/${c.max}</span></td><td><span class="dot ${dc}"></span>${ratio>=.8?'통과':ratio>=.4?'주의':'개선필요'}</td><td style="font-size:11px;color:var(--muted)">${details[c.id]||''}</td></tr>`;
+    });
+  });
+
+  document.getElementById('rewriteBody').style.display = 'none';
+  const aiBody = document.getElementById('aiReviewBody');
+  if (aiBody) { aiBody.style.display = 'none'; aiBody.innerHTML = ''; }
+  document.getElementById('resultsTab').style.display = '';
+  switchTab('results', document.getElementById('resultsTab'));
+}
+
+// ── BATCH ─────────────────────────────────────────────────────
+function loadCSV(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split(/[\r\n]+/).map(l=>l.trim()).filter(l=>l.startsWith('http'));
+    document.getElementById('batchInput').value = lines.join('\n');
+  };
+  reader.readAsText(file);
+}
+
+async function runBatch() {
+  const raw = document.getElementById('batchInput').value.trim();
+  const urls = raw.split(/[\r\n]+/).map(u=>u.trim()).filter(u=>u.startsWith('http'));
+  if (!urls.length) { showBanner('batchBanner','e','URL을 입력하세요.'); return; }
+  if (urls.length > 20) { showBanner('batchBanner','e','최대 20개까지 가능합니다.'); return; }
+  const btn = document.getElementById('batchBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>배치 분석 중...';
+  showBanner('batchBanner','l',`<span class="spinner"></span> ${urls.length}개 URL 분석 중...`);
+  try {
+    const res = await fetch(API+'/api/batch', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({urls}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error||'서버 오류');
+    hideBanner('batchBanner');
+    _batchResults = data.results;
+    showBatchResults(data.results);
+  } catch(e) { showBanner('batchBanner','e','❌ '+e.message); }
+  btn.disabled = false; btn.innerHTML = '⚡ 배치 분석';
+}
+
+function showBatchResults(results) {
+  const tbody = document.getElementById('batchTbody'); tbody.innerHTML = '';
+  results.forEach((r,i) => {
+    const tot = r.totals?.total??0; const gc = GRADE_COLORS[r.grade]||'#94a3b8';
+    const short = r.url ? r.url.replace(/https?:\/\/(www\.)?/,'').slice(0,48) : '(없음)';
+    tbody.innerHTML += `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td title="${r.url||''}"><a href="${r.url||'#'}" target="_blank" style="color:var(--navy);font-size:11px">${short}</a></td>
+      <td><span class="score-chip" style="background:${gc}">${tot}</span></td>
+      <td style="font-weight:700;color:${gc}">${r.grade}${gateChip(r)}</td>
+      <td>${r.totals?.seoTotal??'-'}</td>
+      <td>${r.totals?.geoTotal??'-'}</td>
+      <td style="font-size:11px;color:${r.success?'var(--green)':'var(--red)'}">${r.success?'✅':'❌ '+(r.error||'')}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="viewDetail(${i})">보기</button></td>
+    </tr>`;
+  });
+  document.getElementById('batchResultCount').textContent = `${results.length}개 완료`;
+  document.getElementById('batchResultsTab').style.display = '';
+  switchTab('batchResults', document.getElementById('batchResultsTab'));
+}
+function viewDetail(i) { const r=_batchResults[i]; if(r.scores){showResults(r);saveHistory(r);} }
+
+// ── COMPARE ───────────────────────────────────────────────────
+async function runCompare() {
+  const urlA = document.getElementById('urlA').value.trim();
+  const urlB = document.getElementById('urlB').value.trim();
+  if (!urlA.startsWith('http') || !urlB.startsWith('http')) {
+    showBanner('compareBanner','e','❌ 두 URL을 모두 입력하세요.'); return;
+  }
+  const btn = document.getElementById('compareBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>비교 분석 중...';
+  showBanner('compareBanner','l','<span class="spinner"></span> 두 기사를 동시에 분석 중...');
+  try {
+    const res = await fetch(API+'/api/compare', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({urlA, urlB}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error||'서버 오류');
+    hideBanner('compareBanner');
+    _compareResult = data;
+    showCompareResults(data);
+  } catch(e) { showBanner('compareBanner','e','❌ '+e.message); }
+  btn.disabled = false; btn.innerHTML = '🆚 비교 분석 시작';
+}
+
+function showCompareResults({resultA, resultB, diff}) {
+  const grid = document.getElementById('cmpHeroGrid'); grid.innerHTML = '';
+  const makeHero = (r, cls, label) => {
+    const gc = GRADE_COLORS[r.grade]||'#94a3b8';
+    return `<div class="cmp-hero ${cls}">
+      <div style="font-size:11px;font-weight:700;opacity:.7;margin-bottom:6px">${label}</div>
+      <div class="cmp-score" style="color:${gc}">${r.totals?.total??'-'}</div>
+      <div class="cmp-grade" style="color:${gc}">${r.grade} — ${GRADE_TITLES[r.grade]||''}${gateChip(r)}</div>
+      <div class="cmp-subs">SEO <b>${r.totals?.seoTotal??'-'}/50</b> &nbsp;·&nbsp; GEO <b>${r.totals?.geoTotal??'-'}/50</b><br>
+      <span style="opacity:.6;font-size:10.5px">${(r.url||'').slice(0,50)}</span></div>
+    </div>`;
+  };
+  grid.innerHTML = makeHero(resultA,'cmp-A','🅰 내 기사') + makeHero(resultB,'cmp-B','🅱 경쟁사');
+
+  const tbody = document.querySelector('#cmpTable tbody'); tbody.innerHTML = '';
+  const criteria = resultA.criteria || [];
+  criteria.forEach(c => {
+    const sA = resultA.scores?.[c.id]||0;
+    const sB = resultB.scores?.[c.id]||0;
+    const d = sA - sB;
+    const dCls = d>0?'diff-plus':d<0?'diff-minus':'diff-zero';
+    const dStr = d>0?`+${d}`:String(d);
+    const winA = sA > sB ? '<span class="winner-badge">내 기사 우위</span>' : '';
+    const winB = sB > sA ? '<span class="winner-badge">경쟁사 우위</span>' : '';
+    tbody.innerHTML += `<tr>
+      <td><b>${c.label}</b></td>
+      <td><span style="font-size:10px;color:var(--muted)">${c.group.toUpperCase()}</span></td>
+      <td>${sA}/${c.max} ${winA}</td>
+      <td>${sB}/${c.max} ${winB}</td>
+      <td class="${dCls}">${dStr}점</td>
+    </tr>`;
+  });
+
+  document.getElementById('compareResultsTab').style.display = '';
+  switchTab('compareResults', document.getElementById('compareResultsTab'));
+}
+
+// ── HISTORY (Phase 3: 서버 DB 우선, localStorage 폴백) ─────────
+let _histMode = 'server';
+
+function saveHistory(r) {  // 오프라인 폴백용 로컬 백업 (서버는 자동 저장)
+  if (!r.totals) return;
+  try {
+    const hist = JSON.parse(localStorage.getItem('geo_history') || '[]');
+    hist.unshift({ id: Date.now(), url: r.url || '(HTML)', total: r.totals.total, grade: r.grade,
+      seoTotal: r.totals.seoTotal, geoTotal: r.totals.geoTotal,
+      savedAt: new Date().toLocaleString('ko-KR'), result: r });
+    if (hist.length > 30) hist.splice(30);
+    localStorage.setItem('geo_history', JSON.stringify(hist));
+  } catch (_) {}
+}
+
+function histRow(score, grade, urlText, metaText, onclick, ondelete) {
+  const gc = GRADE_COLORS[grade] || '#94a3b8';
+  return `<div class="hist-item" onclick="${onclick}">
+    <div class="hist-score" style="background:${gc}">${score}</div>
+    <div class="hist-info">
+      <div class="hist-url">${urlText}</div>
+      <div class="hist-meta">${metaText}</div>
+    </div>
+    <span class="hist-del" onclick="${ondelete}">✕</span>
+  </div>`;
+}
+
+async function renderHistory() {
+  const el = document.getElementById('historyList');
+  try {
+    const res = await fetch(API + '/api/history?limit=100');
+    if (!res.ok) throw new Error('server');
+    const data = await res.json();
+    _histMode = 'server';
+    document.getElementById('historySub').textContent =
+      (data.driver === 'sqlite' ? '서버 SQLite DB' : '서버 JSON 저장소') + '에 자동 저장됩니다. 클릭하면 결과를 다시 볼 수 있습니다.';
+    el.innerHTML = '';
+    if (!data.items.length) {
+      el.innerHTML = '<div class="hist-empty">📋 분석 이력이 없습니다.<br>기사를 분석하면 서버 DB에 자동 저장됩니다.</div>';
+      return;
+    }
+    data.items.forEach(h => {
+      const short = (h.url || '(HTML 직접 분석)').replace(/https?:\/\/(www\.)?/, '').slice(0, 55);
+      const when = new Date(h.analyzedAt).toLocaleString('ko-KR');
+      el.innerHTML += histRow(h.total, h.grade, short,
+        `${h.grade}등급 · SEO ${h.seoTotal} / GEO ${h.geoTotal} · ${when}`,
+        `loadHistoryServer(${h.id})`, `deleteHistoryServer(event,${h.id})`);
+    });
+  } catch (_) {
+    _histMode = 'local';
+    document.getElementById('historySub').textContent = '서버 연결 불가 — 브라우저 localStorage 이력을 표시합니다.';
+    renderHistoryLocal();
+  }
+}
+
+function renderHistoryLocal() {
+  const hist = JSON.parse(localStorage.getItem('geo_history') || '[]');
+  const el = document.getElementById('historyList'); el.innerHTML = '';
+  if (!hist.length) {
+    el.innerHTML = '<div class="hist-empty">📋 분석 이력이 없습니다.<br>기사를 분석하면 여기에 자동 저장됩니다.</div>';
+    return;
+  }
+  hist.forEach((h, i) => {
+    const short = h.url.replace(/https?:\/\/(www\.)?/, '').slice(0, 55);
+    el.innerHTML += histRow(h.total, h.grade, short,
+      `${h.grade}등급 · SEO ${h.seoTotal} / GEO ${h.geoTotal} · ${h.savedAt}`,
+      `loadHistory(${i})`, `deleteHistory(event,${i})`);
+  });
+}
+
+async function loadHistoryServer(id) {
+  try {
+    const res = await fetch(API + '/api/history/' + id);
+    const row = await res.json();
+    if (!res.ok) throw new Error(row.error || '이력 로드 실패');
+    showResults(row.result);
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+async function deleteHistoryServer(e, id) {
+  e.stopPropagation();
+  try { await fetch(API + '/api/history/' + id, { method: 'DELETE' }); renderHistory(); }
+  catch (_) { toast('❌ 삭제 실패'); }
+}
+
+function loadHistory(i) {
+  const hist = JSON.parse(localStorage.getItem('geo_history') || '[]');
+  if (hist[i]?.result) showResults(hist[i].result);
+}
+function deleteHistory(e, i) {
+  e.stopPropagation();
+  const hist = JSON.parse(localStorage.getItem('geo_history') || '[]');
+  hist.splice(i, 1);
+  localStorage.setItem('geo_history', JSON.stringify(hist));
+  renderHistory();
+}
+async function clearHistory() {
+  if (!confirm('분석 이력을 모두 삭제할까요?')) return;
+  if (_histMode === 'server') {
+    try { await fetch(API + '/api/history', { method: 'DELETE' }); } catch (_) {}
+  }
+  localStorage.removeItem('geo_history');
+  renderHistory(); loadTsUrls();
+  toast('🗑 이력이 삭제됐습니다.');
+}
+
+// ── 시계열 추이 (Phase 3) ─────────────────────────────────────
+let tsC = null;
+async function loadTsUrls() {
+  try {
+    const res = await fetch(API + '/api/history/urls');
+    if (!res.ok) throw new Error();
+    const urls = await res.json();
+    const sel = document.getElementById('tsUrlSelect');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">URL 선택...</option>';
+    urls.forEach(u => {
+      const short = u.url.replace(/https?:\/\/(www\.)?/, '').slice(0, 60);
+      sel.innerHTML += `<option value="${u.url.replace(/"/g, '&quot;')}">${short} (${u.cnt}회)</option>`;
+    });
+    if (cur) sel.value = cur;
+    document.getElementById('tsEmpty').textContent = urls.length ? '' : '아직 URL 분석 기록이 없습니다.';
+  } catch (_) {
+    document.getElementById('tsEmpty').textContent = '서버 연결 시 사용 가능합니다.';
+  }
+}
+
+async function renderTsChart(url) {
+  const wrap = document.getElementById('tsWrap');
+  if (!url) { wrap.style.display = 'none'; return; }
+  try {
+    const res = await fetch(API + '/api/timeseries?url=' + encodeURIComponent(url));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '추이 로드 실패');
+    const pts = data.points;
+    if (!pts.length) { wrap.style.display = 'none'; document.getElementById('tsEmpty').textContent = '기록 없음'; return; }
+    document.getElementById('tsEmpty').textContent = pts.length === 1 ? '분석이 1회뿐입니다 — 같은 URL을 다시 분석하면 추이가 그려집니다.' : '';
+    wrap.style.display = 'block';
+    const labels = pts.map(p => new Date(p.analyzedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
+    if (tsC) tsC.destroy();
+    tsC = new Chart(document.getElementById('tsChart').getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets: [
+        { label: '총점', data: pts.map(p => p.total), borderColor: '#065A82', backgroundColor: 'rgba(6,90,130,.08)', borderWidth: 2.5, fill: true, tension: .25, pointRadius: 4 },
+        { label: 'SEO', data: pts.map(p => p.seoTotal), borderColor: '#00B4D8', borderWidth: 1.5, borderDash: [5, 3], tension: .25, pointRadius: 3 },
+        { label: 'GEO', data: pts.map(p => p.geoTotal), borderColor: '#FF6B35', borderWidth: 1.5, borderDash: [5, 3], tension: .25, pointRadius: 3 },
+      ]},
+      options: { responsive: true, maintainAspectRatio: false,
+        scales: { y: { min: 0, max: 100 } },
+        plugins: { legend: { labels: { font: { size: 10 } } } } }
+    });
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+// ── 추적 URL (Phase 3) ────────────────────────────────────────
+async function renderTracked() {
+  const el = document.getElementById('trackList');
+  try {
+    const res = await fetch(API + '/api/track');
+    if (!res.ok) throw new Error();
+    const list = await res.json();
+    el.innerHTML = list.length ? '' : '<p style="font-size:12px;color:var(--muted)">추적 중인 URL이 없습니다.</p>';
+    list.forEach(t => {
+      const short = t.url.replace(/https?:\/\/(www\.)?/, '').slice(0, 60);
+      const last = t.last_run ? new Date(t.last_run).toLocaleString('ko-KR') : '아직 실행 안 됨';
+      el.innerHTML += `<div class="hist-item" onclick="document.getElementById('tsUrlSelect').value='${t.url.replace(/'/g, "\\'")}';renderTsChart('${t.url.replace(/'/g, "\\'")}')">
+        <div class="hist-info"><div class="hist-url">🔁 ${short}</div><div class="hist-meta">마지막 재분석: ${last}</div></div>
+        <span class="hist-del" onclick="delTrack(event,${t.id})">✕</span></div>`;
+    });
+  } catch (_) {
+    el.innerHTML = '<p style="font-size:12px;color:var(--muted)">서버 연결 시 사용 가능합니다.</p>';
+  }
+}
+
+async function addTrack() {
+  const url = document.getElementById('trackInput').value.trim();
+  if (!url.startsWith('http')) { toast('올바른 URL을 입력하세요.'); return; }
+  try {
+    const res = await fetch(API + '/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+    if (!res.ok) throw new Error((await res.json()).error || '등록 실패');
+    document.getElementById('trackInput').value = '';
+    renderTracked(); toast('🔁 추적 목록에 등록했습니다.');
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+async function delTrack(e, id) {
+  e.stopPropagation();
+  try { await fetch(API + '/api/track/' + id, { method: 'DELETE' }); renderTracked(); } catch (_) {}
+}
+
+async function runTrackNow() {
+  toast('⚡ 추적 URL 전체 재분석 중...');
+  try {
+    const res = await fetch(API + '/api/track/run', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '재분석 실패');
+    const ok = data.results.filter(r => r.ok).length;
+    toast(`✅ ${ok}/${data.results.length}개 재분석 완료`);
+    renderTracked(); renderHistory(); loadTsUrls();
+    const sel = document.getElementById('tsUrlSelect');
+    if (sel.value) renderTsChart(sel.value);
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+// ── SoV 실측 (Phase 4) ────────────────────────────────────────
+let sovSeriesC = null;
+function getSovKey() { return localStorage.getItem('geo_pplx_key') || ''; }
+
+async function initSov() {
+  try {
+    const cfg = await (await fetch(API + '/api/sov/config')).json();
+    document.getElementById('sovMyDomains').value = (cfg.myDomains || []).join(', ');
+    document.getElementById('sovCompDomains').value = (cfg.competitorDomains || []).join(', ');
+  } catch (_) {}
+  const k = getSovKey();
+  document.getElementById('sovConfigStatus').textContent = k
+    ? '🔑 Perplexity 키 저장됨 (···' + k.slice(-4) + ')'
+    : 'Perplexity 키 미입력 — 서버 환경변수 PERPLEXITY_API_KEY 또는 모크 모드(GEO_SOV_MOCK=1)로도 동작합니다.';
+  renderSovKws(); renderSovSummary();
+}
+
+async function saveSovConfig() {
+  const key = document.getElementById('sovKeyInput').value.trim();
+  if (key) { localStorage.setItem('geo_pplx_key', key); document.getElementById('sovKeyInput').value = ''; }
+  try {
+    const res = await fetch(API + '/api/sov/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ myDomains: document.getElementById('sovMyDomains').value, competitorDomains: document.getElementById('sovCompDomains').value }) });
+    if (!res.ok) throw new Error((await res.json()).error || '저장 실패');
+    toast('✅ SoV 설정이 저장됐습니다.'); initSov();
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+async function renderSovKws() {
+  const el = document.getElementById('sovKwList');
+  try {
+    const list = await (await fetch(API + '/api/sov/keywords')).json();
+    el.innerHTML = list.length ? '' : '<p style="font-size:12px;color:var(--muted)">등록된 키워드가 없습니다.</p>';
+    list.forEach(k => {
+      el.innerHTML += `<div class="hist-item"><div class="hist-info"><div class="hist-url">💬 ${k.keyword}</div></div>
+        <span class="hist-del" onclick="delSovKw(event,${k.id})">✕</span></div>`;
+    });
+  } catch (_) { el.innerHTML = '<p style="font-size:12px;color:var(--muted)">서버 연결 시 사용 가능합니다.</p>'; }
+}
+
+async function addSovKw() {
+  const kw = document.getElementById('sovKwInput').value.trim();
+  if (!kw) return;
+  try {
+    const res = await fetch(API + '/api/sov/keywords', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keyword: kw }) });
+    if (!res.ok) throw new Error((await res.json()).error || '추가 실패');
+    document.getElementById('sovKwInput').value = '';
+    renderSovKws();
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+async function delSovKw(e, id) {
+  e.stopPropagation();
+  try { await fetch(API + '/api/sov/keywords/' + id, { method: 'DELETE' }); renderSovKws(); } catch (_) {}
+}
+
+async function runSov() {
+  const btn = document.getElementById('sovRunBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 측정 중...';
+  try {
+    const headers = {};
+    if (getSovKey()) headers['x-perplexity-key'] = getSovKey();
+    const res = await fetch(API + '/api/sov/run', { method: 'POST', headers });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '측정 실패');
+    toast(`📡 측정 완료 — 자사 SoV ${data.sov}% / 경쟁사 ${data.compSov}%`);
+    renderSovSummary();
+  } catch (e) { toast('❌ ' + e.message); }
+  btn.disabled = false; btn.innerHTML = '▶ 지금 측정';
+}
+
+async function renderSovSummary() {
+  try {
+    const d = await (await fetch(API + '/api/sov/summary')).json();
+    const card = document.getElementById('sovSummaryCard');
+    if (!d.totalChecks) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    document.getElementById('sovNow').textContent = d.currentSov === null ? '-' : d.currentSov + '%';
+    document.getElementById('sovComp').textContent = d.currentCompSov === null ? '-' : d.currentCompSov + '%';
+    const c = d.correlation || {};
+    document.getElementById('sovCorr').innerHTML = (c.citedCount || c.uncitedCount)
+      ? `🔬 <b>점수-인용 상관</b>: 인용된 자사 기사 평균 GEO 점수 <b>${c.citedAvgScore ?? '-'}</b>점(${c.citedCount}건) vs 미인용 <b>${c.uncitedAvgScore ?? '-'}</b>점(${c.uncitedCount}건)<br><span style="font-size:11px">자사 기사를 단일/배치 분석으로 점수화해두면 비교가 정확해집니다.</span>`
+      : '🔬 자사 기사를 분석 이력에 쌓으면 점수-인용 상관이 표시됩니다.' + (d.mock ? ' <b>(현재 모크 모드)</b>' : '');
+    // 일자별 추이
+    const wrap = document.getElementById('sovSeriesWrap');
+    if (d.series.length >= 2) {
+      wrap.style.display = 'block';
+      if (sovSeriesC) sovSeriesC.destroy();
+      sovSeriesC = new Chart(document.getElementById('sovSeriesChart').getContext('2d'), {
+        type: 'line',
+        data: { labels: d.series.map(x => x.day.slice(5)), datasets: [
+          { label: '자사 SoV %', data: d.series.map(x => x.mySov), borderColor: '#065A82', backgroundColor: 'rgba(6,90,130,.08)', borderWidth: 2.5, fill: true, tension: .25 },
+          { label: '경쟁사 SoV %', data: d.series.map(x => x.compSov), borderColor: '#FF6B35', borderWidth: 1.5, borderDash: [5, 3], tension: .25 },
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } }, plugins: { legend: { labels: { font: { size: 10 } } } } }
+      });
+    } else wrap.style.display = 'none';
+    // 키워드별 최신
+    const el = document.getElementById('sovLatestList'); el.innerHTML = '';
+    d.latest.forEach(r => {
+      const badge = r.cited ? `<span style="color:#22c55e;font-weight:700">✅ 인용됨${r.rank ? ' (' + r.rank + '번째)' : ''}</span>` : '<span style="color:#ef4444;font-weight:700">✗ 미인용</span>';
+      const comp = r.compCited ? ' · <span style="color:var(--accent)">경쟁사 인용됨</span>' : '';
+      const urls = (r.myUrls || []).slice(0, 2).map(u => `<a href="${u}" target="_blank" style="font-size:10px">${u.slice(0, 60)}</a>`).join('<br>');
+      el.innerHTML += `<div class="hist-item" style="cursor:default">
+        <div class="hist-info"><div class="hist-url">💬 ${r.keyword}</div>
+        <div class="hist-meta">${badge}${comp} · ${r.engine} · ${new Date(r.checkedAt).toLocaleString('ko-KR')}${urls ? '<br>' + urls : ''}</div></div></div>`;
+    });
+  } catch (_) {}
+}
+
+// ── TOOLS (bookmarklet + SoV) ─────────────────────────────────
+function initTools() {
+  const host = location.origin || 'http://localhost:3000';
+  const bm = `javascript:(function(){var u=encodeURIComponent(location.href);window.open('${host}/?url='+u,'_blank','width=1100,height=800');})();`;
+  document.getElementById('bookmarkletCode').textContent = bm;
+  document.getElementById('bookmarkletLink').href = bm;
+}
+function copyBM() {
+  navigator.clipboard.writeText(document.getElementById('bookmarkletCode').textContent)
+    .then(() => toast('✅ 북마클릿 코드 복사됨!'));
+}
+// Auto-load URL from query param
+(function(){
+  const params = new URLSearchParams(location.search);
+  const u = params.get('url');
+  if (u) {
+    document.getElementById('urlInput').value = u;
+    setTimeout(analyze, 400);
+  }
+})();
+
+// ── AI 정성 분석 (Phase 2) ────────────────────────────────────
+function getAiKey() { return localStorage.getItem('geo_ai_key') || ''; }
+function saveAiKey() {
+  const v = document.getElementById('aiKeyInput').value.trim();
+  if (!v) { toast('키를 입력하세요.'); return; }
+  localStorage.setItem('geo_ai_key', v);
+  document.getElementById('aiKeyInput').value = '';
+  updateAiKeyStatus(); toast('🔑 API 키가 저장됐습니다.');
+}
+function clearAiKey() { localStorage.removeItem('geo_ai_key'); updateAiKeyStatus(); toast('키가 삭제됐습니다.'); }
+function updateAiKeyStatus() {
+  const el = document.getElementById('aiKeyStatus');
+  if (el) el.textContent = getAiKey() ? '✅ 키 저장됨 (sk-ant-···' + getAiKey().slice(-4) + ')' : '키 미설정 — 서버 환경변수 ANTHROPIC_API_KEY가 있으면 그것을 사용합니다.';
+}
+function escA(s) { const d = document.createElement('div'); d.textContent = String(s ?? ''); return d.innerHTML; }
+
+async function callAi(path) {
+  const headers = { 'Content-Type': 'application/json' };
+  const key = getAiKey();
+  if (key) headers['x-anthropic-key'] = key;
+  const res = await fetch(API + path, { method: 'POST', headers, body: JSON.stringify({ result: _last }) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'AI 서버 오류');
+  return data;
+}
+
+async function runAiAnalyze() {
+  if (!_last) { toast('먼저 분석을 실행하세요.'); return; }
+  const btn = document.getElementById('aiAnalyzeBtn');
+  const body = document.getElementById('aiReviewBody');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 평가 중...';
+  body.style.display = 'block';
+  body.innerHTML = '<p style="font-size:12px;color:var(--muted)"><span class="spinner"></span> Claude가 인용가능성을 평가하는 중... (10-30초)</p>';
+  try {
+    const r = await callAi('/api/ai/analyze');
+    renderAiReview(r);
+  } catch (e) {
+    body.innerHTML = `<p style="font-size:12px;color:#ef4444">❌ ${escA(e.message)}</p>`;
+  }
+  btn.disabled = false; btn.innerHTML = '🤖 AI 평가 실행';
+}
+
+function renderAiReview(r) {
+  const body = document.getElementById('aiReviewBody');
+  const c = r.citability ?? 0;
+  const cColor = c >= 75 ? '#22c55e' : c >= 50 ? '#f59e0b' : '#ef4444';
+  const axes = r.axes || {};
+  const axisRows = Object.entries(axes).map(([k, v]) =>
+    `<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+      <span style="width:90px;font-size:11px;color:var(--muted)">${escA(k)}</span>
+      <div style="flex:1;height:8px;background:rgba(100,116,139,.15);border-radius:4px"><div style="height:8px;border-radius:4px;background:var(--cyan);width:${Math.min(100, (v / 20) * 100)}%"></div></div>
+      <span style="font-size:11px;font-weight:700">${escA(v)}/20</span>
+    </div>`).join('');
+  const li = (arr, icon) => (arr || []).map(s => `<li style="font-size:12px;margin:3px 0">${icon} ${escA(s)}</li>`).join('');
+  const sug = (r.suggestions || []).map(s => {
+    const col = s.priority === 'high' ? '#ef4444' : s.priority === 'mid' ? '#f59e0b' : '#64748b';
+    return `<li style="font-size:12px;margin:4px 0"><span style="color:${col};font-weight:700">[${escA(s.priority)}]</span> ${escA(s.action)}</li>`;
+  }).join('');
+  const q = (r.predictedQueries || []).map(s => `<li style="font-size:12px;margin:3px 0">💬 ${escA(s)}</li>`).join('');
+  const flags = [...(r.injectionFlags || []), ...(r.localInjectionFlags || [])];
+  const injBox = r.injectionDetected ? `<div style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:10px">🛡️ <b>페이지에서 AI 대상 지시문을 발견해 무시하고 평가했습니다.</b><ul style="margin:4px 0 0 18px">${flags.slice(0,5).map(f=>`<li>${escA(f)}</li>`).join('')}</ul></div>` : '';
+  body.innerHTML = injBox + `
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      <div style="text-align:center;min-width:110px">
+        <div style="font-size:34px;font-weight:800;color:${cColor}">${escA(c)}</div>
+        <div style="font-size:10px;color:var(--muted)">AI 인용가능성 /100</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${escA(r.model || '')}</div>
+      </div>
+      <div style="flex:1;min-width:240px">${axisRows}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+      <div><h4 style="font-size:12px;color:var(--navy);margin-bottom:4px">강점</h4><ul style="list-style:none">${li(r.strengths, '✅')}</ul></div>
+      <div><h4 style="font-size:12px;color:var(--navy);margin-bottom:4px">약점</h4><ul style="list-style:none">${li(r.weaknesses, '⚠️')}</ul></div>
+      <div><h4 style="font-size:12px;color:var(--navy);margin-bottom:4px">개선 제안</h4><ul style="list-style:none">${sug}</ul></div>
+      <div><h4 style="font-size:12px;color:var(--navy);margin-bottom:4px">인용 예상 질문</h4><ul style="list-style:none">${q}</ul></div>
+    </div>`;
+}
+
+async function runAiRewrite() {
+  if (!_last) { toast('먼저 분석을 실행하세요.'); return; }
+  const btn = document.getElementById('aiRewriteBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 리라이팅 중...';
+  toast('✨ Claude가 기사를 다시 쓰는 중... (20-60초)');
+  try {
+    const r = await callAi('/api/ai/rewrite');
+    document.getElementById('rewriteBody').style.display = 'block';
+    document.getElementById('rwTitle').value = r.title || '';
+    document.getElementById('rwMeta').value = r.metaDescription || '';
+    document.getElementById('rwFirst').value = r.firstParagraph || '';
+    document.getElementById('rwBody').value = r.body || '';
+    document.getElementById('rwJsonld').value = r.jsonLd ? JSON.stringify(r.jsonLd, null, 2) : '';
+    rCharCount('rwTitle','rwTitleCount',45,65); rCharCount('rwMeta','rwMetaCount',120,160);
+    rCharCount('rwFirst','rwFirstCount',100,300); rCharCount('rwBody','rwBodyCount',800,5000);
+    let aiHint = '<b>✨ Claude AI 리라이팅 결과입니다.</b> ' + (r.notes || []).map(escA).join(' · ');
+    if (r.unverifiedNumbers && r.unverifiedNumbers.length) aiHint += `<div style="color:#b91c1c;margin-top:4px">⚠️ <b>원문에 없는 숫자 ${r.unverifiedNumbers.length}개</b>: ${r.unverifiedNumbers.map(escA).join(', ')} — 게재 전 반드시 원문과 대조하세요(단위 환산·계산 결과일 수도 있음).</div>`;
+    if (r.jsonLdFixes && r.jsonLdFixes.length) aiHint += `<div style="margin-top:4px">🔧 JSON-LD 자동 보정: ${r.jsonLdFixes.map(escA).join(' · ')}</div>`;
+    if (r.injectionDetected) aiHint += `<div style="color:#92400e;margin-top:4px">🛡️ 페이지 속 AI 대상 지시문을 무시하고 작성했습니다.</div>`;
+    document.getElementById('rwTitleHint').innerHTML = aiHint;
+    document.getElementById('rewriteCard').scrollIntoView({ behavior: 'smooth' });
+    toast('✨ AI 리라이팅 완료 — 재작성 패널에 채워졌습니다.');
+  } catch (e) { toast('❌ ' + e.message); }
+  btn.disabled = false; btn.innerHTML = '✨ AI 리라이팅';
+}
+
+// ── REWRITE ───────────────────────────────────────────────────
+function buildRewrite() {
+  if (!_last) { toast('먼저 분석을 실행하세요.'); return; }
+  const r = _last;
+
+  // Extract from meta
+  const title = r.meta?.title || '';
+  const metaDesc = r.meta?.metaDesc || '';
+  const firstPara = r.meta?.firstPara || '';
+  const bodyText = r.meta?.bodyText || '';
+  const ldText = r.meta?.ldText || '';
+
+  // ① 제목
+  let optTitle = title; let titleHint = '';
+  const tl = title.length;
+  if (!title) { optTitle = '[제목 없음 — 직접 입력]'; titleHint = '<b>⚠️ title 태그가 없습니다.</b> 45-65자로 작성하세요.'; }
+  else if (tl < 30) titleHint = `<b>⚠️ 너무 짧습니다 (${tl}자).</b> 45자 이상으로 늘리세요.`;
+  else if (tl > 70) { optTitle = title.slice(0,65); titleHint = `<b>⚠️ 너무 깁니다 (${tl}자 → 65자로 자름).</b>`; }
+  else titleHint = `<b>✅ 제목 길이 양호 (${tl}자).</b>`;
+
+  // ② 메타
+  let optMeta = metaDesc; let metaHint = '';
+  const ml = metaDesc.length;
+  if (!metaDesc) {
+    optMeta = firstPara.slice(0,150).trim() + (firstPara.length>150?'...':'');
+    metaHint = '<b>⚠️ 메타 없음 — 첫 문단에서 자동 생성.</b> 120-160자로 수정하세요.';
+  } else if (ml < 80) metaHint = `<b>⚠️ 메타 짧음 (${ml}자).</b> 120-160자로 늘리세요.`;
+  else if (ml > 170) { optMeta = metaDesc.slice(0,157)+'...'; metaHint = `<b>⚠️ 메타 너무 김 (${ml}자 → 160자로 자름).</b>`; }
+  else metaHint = `<b>✅ 메타 양호 (${ml}자).</b>`;
+
+  // ③ 첫 문단 분석
+  const hasNum = /\d/.test(firstPara.slice(0,150));
+  const hasName = /[가-힣]{2,}(㈜|주식회사|코스피|FDA|EMA|임상)/.test(firstPara)||/[A-Z][a-zA-Z]{2,}/.test(firstPara)||firstPara.length>=100;
+  const hasDate = /20\d{2}|년/.test(firstPara.slice(0,150));
+  const missing = [];
+  if (!hasNum) missing.push('수치');
+  if (!hasName) missing.push('기업명/약물명');
+  if (!hasDate) missing.push('날짜·연도');
+  const firstHint = missing.length ? `<b>⚠️ 첫 문단 누락: ${missing.join(', ')}</b> — AI 인용률 향상을 위해 150자 안에 포함하세요.` : '<b>✅ 첫 문단 팩트 구성 양호.</b>';
+
+  // ④ 본문 힌트
+  const bodyLen = (r.meta?.bodyLen || 0);
+  const bodyHints = [];
+  if (r.scores?.h2_count < 5) bodyHints.push('H2 소제목 2개 이상 추가');
+  if (bodyLen < 800) bodyHints.push(`본문 ${bodyLen}자 → 800자 이상 권장`);
+  if ((r.scores?.external_links||0) < 3) {
+    const sm = (r.meta?.sourceMentions || []).filter(m => m.kind !== 'pr').slice(0, 3).map(m => m.hint);
+    const pr = (r.meta?.sourceMentions || []).find(m => m.kind === 'pr');
+    const cand = sm.length ? sm : pr ? [pr.hint] : ['공시·임상등록·논문·규제기관 등 원출처'];
+    bodyHints.push('원출처 링크 추가 — ' + cand.join(', ') + ' (AI는 원출처를 밝힌 기사를 우선 인용)');
+  }
+  if ((r.scores?.internal_links||0) < 4) bodyHints.push('내부 링크 3개 이상');
+  let bodyHint = bodyHints.length ? `<b>개선 필요:</b> ${bodyHints.join(' · ')}` : '<b>✅ 본문 구조 양호.</b>';
+  const pp = r.paragraphs;
+  if (pp && pp.problems && pp.problems.length) {
+    const escP = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    bodyHint += `<div style="margin-top:6px"><b>📌 문단 단위 인용 점검</b> (AI는 문단 하나를 잘라 인용합니다)<ul style="margin:4px 0 0 18px">`
+      + pp.problems.slice(0, 6).map(x => `<li>${escP(x.message)}<div style="opacity:.6;font-size:10.5px">“${escP(x.text)}…”</div></li>`).join('')
+      + (pp.problems.length > 6 ? `<li>외 ${pp.problems.length - 6}건</li>` : '') + '</ul></div>';
+  }
+
+  // ⑤ JSON-LD
+  const hasLD = !!ldText && (r.scores?.article_schema||0) >= 6;
+  const lc = r.ldConsistency;
+  const escH = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  let jsonld = '', jsonldHint = '';
+  if (hasLD) {
+    let obj = null;
+    try { obj = JSON.parse(ldText); } catch(_) {}
+    if (lc && lc.issues && lc.issues.length) {
+      const fixes = [];
+      // 화면 제목과 다른 headline은 화면 H1(없으면 최적화 제목)으로 교체
+      const hl = lc.checks.find(c => c.field === 'headline');
+      if (obj && hl && !hl.ok) {
+        const vis = (r.meta?.h1Text || optTitle || '').trim();
+        if (vis && !vis.startsWith('[')) { obj.headline = vis.slice(0, 110); fixes.push('headline → 화면 제목으로 교체'); }
+      }
+      jsonldHint = `<b>⚠️ JSON-LD가 화면 내용과 다릅니다.</b> AI·검색엔진은 화면과 다른 구조화 데이터를 신뢰하지 않습니다.<ul style="margin:4px 0 0 18px">${lc.issues.map(x=>'<li>'+escH(x)+'</li>').join('')}</ul>`
+        + (fixes.length ? `<div style="margin-top:4px">아래 코드에 반영: ${fixes.join(' · ')}. 저자·날짜는 CMS의 실제 값을 확인해 직접 고치세요.</div>` : '<div style="margin-top:4px">저자·날짜는 CMS의 실제 값을 확인해 직접 고치세요.</div>');
+    } else {
+      jsonldHint = '<b>✅ Article 스키마 존재, 화면 내용과 일치.</b>' + (lc && !lc.dateModified ? ' dateModified가 없으니 수정 기사라면 실제 수정 시각을 추가하세요.' : '');
+    }
+    jsonld = obj ? JSON.stringify(obj, null, 2) : ldText;
+  } else {
+    // 날짜·저자는 페이지에서 찾은 실제 값만 넣는다 (오늘 날짜 등 추정값 금지)
+    const pubVal = r.meta?.dateEl ? String(r.meta.dateEl) : '[발행일시 — 예: 2026-09-21T09:00:00+09:00]';
+    const authorVal = r.meta?.authorEl ? String(r.meta.authorEl).replace(/\s*기자\s*$/, '').trim() : '[저자명]';
+    jsonldHint = '<b>⚠️ Article 계열 JSON-LD 없음.</b> 아래 코드를 &lt;/head&gt; 직전에 추가하세요. [ ] 표시는 화면에 보이는 실제 값으로 채워야 합니다 — 화면과 다른 값은 오히려 신뢰를 떨어뜨립니다.';
+    jsonld = JSON.stringify({"@context":"https://schema.org","@type":"NewsArticle","headline":(r.meta?.h1Text||optTitle),"description":optMeta,"datePublished":pubVal,"dateModified":pubVal,"author":{"@type":"Person","name":authorVal},"publisher":{"@type":"Organization","name":"[언론사명]","logo":{"@type":"ImageObject","url":"[로고URL]"}},"mainEntityOfPage":{"@type":"WebPage","@id":r.url||"[기사URL]"},"image":{"@type":"ImageObject","url":"[대표이미지URL]"}}, null, 2);
+  }
+
+  // Populate
+  document.getElementById('rwTitle').value = optTitle;
+  document.getElementById('rwTitleHint').innerHTML = titleHint;
+  rCharCount('rwTitle','rwTitleCount',45,65);
+
+  document.getElementById('rwMeta').value = optMeta;
+  document.getElementById('rwMetaHint').innerHTML = metaHint;
+  rCharCount('rwMeta','rwMetaCount',120,160);
+
+  document.getElementById('rwFirst').value = firstPara;
+  document.getElementById('rwFirstHint').innerHTML = firstHint;
+  rCharCount('rwFirst','rwFirstCount',100,300);
+
+  document.getElementById('rwBody').value = bodyText;
+  document.getElementById('rwBodyHint').innerHTML = bodyHint;
+  rCharCount('rwBody','rwBodyCount',800,5000);
+
+  document.getElementById('rwJsonld').value = jsonld;
+  document.getElementById('rwJsonldHint').innerHTML = jsonldHint;
+
+  document.getElementById('rewriteBody').style.display = 'block';
+  document.getElementById('rewriteBody').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function rCharCount(fid, cid, min, max) {
+  const len = document.getElementById(fid).value.length;
+  const cls = len < min ? 'char-warn' : len > max ? 'char-bad' : 'char-ok';
+  document.getElementById(cid).innerHTML = `<span class="${cls}">${len}자</span> (권장 ${min}-${max}자)`;
+}
+
+function copyField(id) {
+  const v = document.getElementById(id).value;
+  navigator.clipboard.writeText(v).then(() => toast('✅ 복사됐습니다!')).catch(() => {
+    const t = document.createElement('textarea'); t.value = v; document.body.appendChild(t);
+    t.select(); document.execCommand('copy'); t.remove(); toast('✅ 복사됐습니다!');
+  });
+}
+
+function copyAll() {
+  const t = [
+    '【제목】\n' + document.getElementById('rwTitle').value,
+    '\n【메타 디스크립션】\n' + document.getElementById('rwMeta').value,
+    '\n【본문】\n' + document.getElementById('rwFirst').value,
+    document.getElementById('rwBody').value,
+  ].join('\n').trim();
+  navigator.clipboard.writeText(t).then(() => toast('📄 기사 전문이 복사됐습니다!')).catch(() => {
+    const el = document.createElement('textarea'); el.value = t; document.body.appendChild(el);
+    el.select(); document.execCommand('copy'); el.remove(); toast('📄 기사 전문이 복사됐습니다!');
+  });
+}
+
+// ── DOWNLOAD ──────────────────────────────────────────────────
+async function downloadPDF() {
+  if (!_last) { toast('먼저 분석을 실행하세요.'); return; }
+  const btn = event.target; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>PDF...';
+  try {
+    const res = await fetch(API+'/api/report/pdf', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_last)});
+    if (!res.ok) throw new Error('PDF 생성 실패');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `geo-${Date.now()}.pdf`; a.click();
+    URL.revokeObjectURL(url); toast('📄 PDF 다운로드 완료!');
+  } catch(e) { toast('❌ '+e.message); }
+  btn.disabled = false; btn.innerHTML = '⬇ PDF';
+}
+
+async function downloadExcel() {
+  if (!_last) { toast('먼저 분석을 실행하세요.'); return; }
+  const btn = event.target; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Excel...';
+  try {
+    const res = await fetch(API+'/api/report/excel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_last)});
+    if (!res.ok) throw new Error('Excel 생성 실패');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `geo-${Date.now()}.xlsx`; a.click();
+    URL.revokeObjectURL(url); toast('📊 Excel 다운로드 완료!');
+  } catch(e) { toast('❌ '+e.message); }
+  btn.disabled = false; btn.innerHTML = '⬇ Excel';
+}
+
+async function downloadBatchExcel() {
+  if (!_batchResults.length) { toast('배치 분석을 먼저 실행하세요.'); return; }
+  try {
+    const res = await fetch(API+'/api/report/excel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_batchResults)});
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `geo-batch-${Date.now()}.xlsx`; a.click();
+    URL.revokeObjectURL(url); toast('📊 배치 Excel 다운로드 완료!');
+  } catch(e) { toast('❌ '+e.message); }
+}
+
+async function downloadCompareExcel() {
+  if (!_compareResult) { toast('비교 분석을 먼저 실행하세요.'); return; }
+  const {resultA, resultB} = _compareResult;
+  try {
+    const res = await fetch(API+'/api/report/excel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify([resultA, resultB])});
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `geo-compare-${Date.now()}.xlsx`; a.click();
+    URL.revokeObjectURL(url); toast('📊 비교 Excel 다운로드 완료!');
+  } catch(e) { toast('❌ '+e.message); }
+}
+
+// ── TOAST ─────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2400);
+}
+</script>
+</body>
+</html>
